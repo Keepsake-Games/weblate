@@ -2834,6 +2834,11 @@ class ChangeSerializer(RemovableSerializer[Change]):
     author = serializers.HyperlinkedRelatedField(
         read_only=True, view_name="api:user-detail", lookup_field="username"
     )
+    # Spelled out next to the hyperlink above, so that consumers building credits
+    # or release notes do not have to parse it out of an URL
+    author_username = serializers.CharField(
+        source="author.username", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = Change
@@ -2843,6 +2848,7 @@ class ChangeSerializer(RemovableSerializer[Change]):
             "translation",
             "user",
             "author",
+            "author_username",
             "timestamp",
             "action",
             "target",

@@ -3703,10 +3703,14 @@ class ChangeFilter(filters.FilterSet):
     timestamp = filters.IsoDateTimeFromToRangeFilter()
     action = filters.MultipleChoiceFilter(choices=ActionEvents.choices)
     user = filters.CharFilter(field_name="user__username")
+    # The author wrote the translation, while the user performed the action; the
+    # two differ for example when a suggestion from one user is accepted by
+    # another. Attribution should use the author.
+    author = filters.CharFilter(field_name="author__username")
 
     class Meta:
         model = Change
-        fields = ("action", "user", "timestamp")
+        fields = ("action", "user", "author", "timestamp")
 
 
 class ChangesFilterBackend(filters.DjangoFilterBackend):

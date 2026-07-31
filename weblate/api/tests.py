@@ -11427,6 +11427,38 @@ class ChangeAPITest(APIBaseTest):
         response = self.client.get(reverse("api:change-list"), {"user": "nonexisting"})
         self.assertEqual(response.data["count"], 0)
 
+    def test_filter_changes_author(self) -> None:
+        """Filter by non existing author."""
+        response = self.client.get(
+            reverse("api:change-list"), {"author": "nonexisting"}
+        )
+        self.assertEqual(response.data["count"], 0)
+
+    def test_filter_changes_author_matches_writer(self) -> None:
+        """The author of a change is who wrote it, not who performed it."""
+        author = User.objects.create_user("writer", "writer@example.com")
+        actor = User.objects.create_user("reviewer", "reviewer@example.com")
+        change = Change.objects.all()[0]
+        # Updating directly to avoid the side effects of saving a change
+        Change.objects.filter(pk=change.pk).update(user=actor, author=author)
+
+        response = self.client.get(reverse("api:change-list"), {"author": "writer"})
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["author_username"], "writer")
+        # Filtering by the user who performed it does not find it as an author
+        response = self.client.get(reverse("api:change-list"), {"author": "reviewer"})
+        self.assertEqual(response.data["count"], 0)
+        response = self.client.get(reverse("api:change-list"), {"user": "reviewer"})
+        self.assertEqual(response.data["count"], 1)
+
+    def test_change_author_username_without_author(self) -> None:
+        change = Change.objects.all()[0]
+        Change.objects.filter(pk=change.pk).update(author=None)
+        response = self.client.get(
+            reverse("api:change-detail", kwargs={"pk": change.pk})
+        )
+        self.assertIsNone(response.data["author_username"])
+
     def test_get_change(self) -> None:
         response = self.client.get(
             reverse("api:change-detail", kwargs={"pk": Change.objects.all()[0].pk})
