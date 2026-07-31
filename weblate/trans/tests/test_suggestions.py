@@ -8,8 +8,11 @@ from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 
-from weblate.trans.models import Suggestion, WorkflowSetting
+from weblate.auth.models import User
+from weblate.trans.actions import ActionEvents
+from weblate.trans.models import Change, Suggestion, WorkflowSetting
 from weblate.trans.tests.test_views import ViewTestCase
+from weblate.trans.tests.utils import TESTPASSWORD
 
 
 class SuggestionsTest(ViewTestCase):
@@ -412,3 +415,180 @@ class SuggestionModelTest(TestCase):
 
         suggestion_empty = Suggestion(target="")
         self.assertEqual(suggestion_empty.target_list, [""])
+
+
+class WorkflowAttributionTest(ViewTestCase):
+    """
+    Pin down who is credited under each of the translation workflows.
+
+    Credits and any release notes are built from the author of a change, see
+    :ref:`discord-attribution`, so which of the two user references a workflow
+    fills in decides who gets the credit.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.reviewer = User.objects.create(
+            username="reviewer",
+            email="reviewer@example.org",
+            password=TESTPASSWORD,
+            full_name="Reviewer",
+        )
+        self.project.add_user(self.reviewer, "Administration")
+
+    def get_content_changes(self):
+        return [
+            (
+                change.action,
+                change.user.username if change.user else None,
+                change.author.username if change.author else None,
+            )
+            for change in Change.objects.content().order_by("timestamp", "pk")
+        ]
+
+    def test_direct_translation(self) -> None:
+        """The translator is both the user and the author."""
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n")
+        self.assertEqual(
+            self.get_content_changes(),
+            [(ActionEvents.NEW, "testuser", "testuser")],
+        )
+
+    def test_peer_review(self) -> None:
+        """Accepting credits the suggester, not whoever accepted."""
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n", suggest="yes")
+        suggestion = self.get_unit().suggestions[0]
+
+        self.client.login(username="reviewer", password="testpassword")
+        self.edit_unit("Hello, world!\n", "", accept=suggestion.pk)
+
+        # Adding a suggestion is not a content change, so it earns no credit,
+        # and the acceptance is credited to the suggester
+        self.assertEqual(
+            self.get_content_changes(),
+            [(ActionEvents.ACCEPT, "reviewer", "testuser")],
+        )
+
+    def test_dedicated_reviewers(self) -> None:
+        """Approving is a content change credited to the reviewer."""
+        self.project.translation_review = True
+        self.project.save(update_fields=["translation_review"])
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n")
+
+        self.client.login(username="reviewer", password="testpassword")
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n", review="30")
+
+        # Both are credited, each with their own change
+        self.assertEqual(
+            self.get_content_changes(),
+            [
+                (ActionEvents.NEW, "testuser", "testuser"),
+                (ActionEvents.APPROVE, "reviewer", "reviewer"),
+            ],
+        )
+
+
+class SuggestionVoterCreditTest(ViewTestCase):
+    """
+    Voters are recorded on the change, so that review effort can be credited.
+
+    The votes are destroyed together with the suggestion, so the information has
+    to be captured while accepting or rejecting, see :ref:`discord-attribution`.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.component.suggestion_voting = True
+        self.component.suggestion_autoaccept = 0
+        self.component.save()
+        self.voters = []
+        for name in ("alice", "bob"):
+            voter = User.objects.create(
+                username=name,
+                email=f"{name}@example.org",
+                password=TESTPASSWORD,
+                full_name=name.title(),
+            )
+            self.project.add_user(voter, "Administration")
+            self.voters.append(voter)
+
+    def vote(self, username: str, suggestion_pk: int, *, approve: bool = True) -> None:
+        self.client.login(username=username, password="testpassword")
+        if approve:
+            self.edit_unit("Hello, world!\n", "", upvote=suggestion_pk)
+        else:
+            self.edit_unit("Hello, world!\n", "", downvote=suggestion_pk)
+
+    def get_change_voters(self, action):
+        change = Change.objects.filter(action=action).order_by("-timestamp")[0]
+        return change.details.get("voters")
+
+    def test_accept_records_voters(self) -> None:
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n", suggest="yes")
+        suggestion = self.get_unit().suggestions[0]
+
+        self.vote("alice", suggestion.pk)
+        self.vote("bob", suggestion.pk, approve=False)
+
+        self.client.login(username="testuser", password="testpassword")
+        self.edit_unit("Hello, world!\n", "", accept=suggestion.pk)
+
+        self.assertEqual(
+            self.get_change_voters(ActionEvents.ACCEPT),
+            {"approve": ["alice"], "reject": ["bob"]},
+        )
+
+    def test_reject_records_voters(self) -> None:
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n", suggest="yes")
+        suggestion = self.get_unit().suggestions[0]
+
+        self.vote("bob", suggestion.pk, approve=False)
+
+        self.client.login(username="testuser", password="testpassword")
+        self.edit_unit("Hello, world!\n", "", delete=suggestion.pk)
+
+        self.assertEqual(
+            self.get_change_voters(ActionEvents.SUGGESTION_DELETE),
+            {"reject": ["bob"]},
+        )
+
+    def test_suggester_excluded(self) -> None:
+        """The suggester is credited as author, so is left out of the voters."""
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n", suggest="yes")
+        suggestion = self.get_unit().suggestions[0]
+        # The suggester votes for their own suggestion
+        self.vote("testuser", suggestion.pk)
+        self.vote("alice", suggestion.pk)
+
+        self.client.login(username="testuser", password="testpassword")
+        self.edit_unit("Hello, world!\n", "", accept=suggestion.pk)
+
+        self.assertEqual(
+            self.get_change_voters(ActionEvents.ACCEPT), {"approve": ["alice"]}
+        )
+
+    def test_no_votes_records_nothing(self) -> None:
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n", suggest="yes")
+        suggestion = self.get_unit().suggestions[0]
+
+        self.edit_unit("Hello, world!\n", "", accept=suggestion.pk)
+
+        self.assertIsNone(self.get_change_voters(ActionEvents.ACCEPT))
+
+    def test_autoaccept_records_voters(self) -> None:
+        """Voting can accept the suggestion itself, which still records voters."""
+        self.component.suggestion_autoaccept = 2
+        self.component.save()
+
+        self.edit_unit("Hello, world!\n", "Nazdar svete!\n", suggest="yes")
+        suggestion = self.get_unit().suggestions[0]
+
+        # This vote reaches the threshold and accepts the suggestion
+        self.vote("alice", suggestion.pk)
+
+        unit = self.get_unit()
+        self.assertEqual(unit.target, "Nazdar svete!\n")
+        self.assertEqual(len(unit.suggestions), 0)
+        self.assertEqual(
+            self.get_change_voters(ActionEvents.ACCEPT), {"approve": ["alice"]}
+        )

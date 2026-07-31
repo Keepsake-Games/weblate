@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.contrib.postgres import indexes as postgres_indexes
@@ -154,6 +154,26 @@ class Suggestion(models.Model, UserDisplayMixin):
         super().__init__(*args, **kwargs)
         self.fixups: list[str] = []
 
+    def get_voters(self) -> dict[str, list[str]]:
+        """
+        Collect the users who voted, grouped by what they voted for.
+
+        The votes are removed together with the suggestion, so this has to be
+        called while it still exists for the information to be kept at all, see
+        :ref:`discord-attribution`. The person who suggested is left out, as they
+        are recorded as the author and vote for their own suggestion when
+        suggesting with voting turned on.
+        """
+        result: dict[str, list[str]] = {}
+        for vote in self.vote_set.select_related("user"):
+            if not vote.value or vote.user_id == self.user_id:
+                continue
+            key = "approve" if vote.value > 0 else "reject"
+            result.setdefault(key, []).append(vote.user.username)
+        for usernames in result.values():
+            usernames.sort()
+        return result
+
     @transaction.atomic
     def accept(
         self,
@@ -164,6 +184,9 @@ class Suggestion(models.Model, UserDisplayMixin):
         if not request.user.has_perm(permission, self.unit):
             messages.error(request, gettext("Could not accept suggestion!"))
             return
+
+        # Has to happen before the suggestion, and with it the votes, is removed
+        voters = self.get_voters()
 
         # Skip if there is no change
         if self.unit.target != self.target or self.unit.state < STATE_TRANSLATED:
@@ -177,6 +200,7 @@ class Suggestion(models.Model, UserDisplayMixin):
                 state,
                 author=author,
                 change_action=ActionEvents.ACCEPT,
+                change_details={"voters": voters} if voters else None,
             )
 
         # Delete the suggestion
@@ -195,12 +219,16 @@ class Suggestion(models.Model, UserDisplayMixin):
             report_spam(
                 self.userdetails["address"], self.userdetails["agent"], self.target
             )
+        details: dict[str, Any] = {"rejection_reason": rejection_reason}
+        # Has to happen before the suggestion, and with it the votes, is removed
+        if voters := self.get_voters():
+            details["voters"] = voters
         self.unit.change_set.create(
             action=change,
             user=user,
             target=self.target,
             author=user,
-            details={"rejection_reason": rejection_reason},
+            details=details,
             old=old,
         )
         self.delete()
