@@ -459,12 +459,15 @@ class Notification:
     def notify_immediate(self, change: Change) -> None:
         for user in self.get_users(NotificationFrequency.FREQ_INSTANT, change):
             if change.project is None or user.can_access_project(change.project):
-                self.send_immediate(
-                    user.profile.language,
-                    user.email,
-                    change,
-                    subscription=user.current_subscription,
-                )
+                # Skipping the send, but still consuming the subscription below,
+                # otherwise a one-time subscription would be retried forever
+                if user.has_deliverable_email:
+                    self.send_immediate(
+                        user.profile.language,
+                        user.email,
+                        change,
+                        subscription=user.current_subscription,
+                    )
                 # Delete onetime subscription
                 current_subscription = cast("Subscription", user.current_subscription)
                 if current_subscription.onetime:
@@ -527,6 +530,8 @@ class Notification:
                     notifications[user.pk].append(change)
                     users[user.pk] = user
         for user in users.values():
+            if not user.has_deliverable_email:
+                continue
             user_changes = notifications[user.pk]
             overlimit = False
             if len(user_changes) > 100:
@@ -865,6 +870,8 @@ class TranslationActivitySummaryNotification(Notification):
             if not summaries:
                 continue
             user = users[userid]
+            if not user.has_deliverable_email:
+                continue
             self.send_digest(
                 user.profile.language,
                 user.email,
@@ -1319,6 +1326,8 @@ class SummaryNotification(Notification):
                 notifications[user.pk].append(context)
         for userid, summaries in notifications.items():
             user = users[userid]
+            if not user.has_deliverable_email:
+                continue
             self.send_digest(
                 user.profile.language,
                 user.email,

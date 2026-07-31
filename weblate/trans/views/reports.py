@@ -16,6 +16,7 @@ from django.utils.html import conditional_escape, format_html, format_html_join
 from django.utils.translation import gettext
 from django.views.decorators.http import require_POST
 
+from weblate.accounts.models import is_private_commit_email
 from weblate.lang.models import Language
 from weblate.memory.machine import WeblateMemory
 from weblate.trans.actions import ActionEvents
@@ -471,6 +472,8 @@ def get_credits(request: AuthenticatedHttpRequest, path=None):
         </tr>
         """
         translator_format = '<li><a href="mailto:{0}">{2} ({1})</a> - {3}</li>'
+        # Generated addresses never receive mail, so there is nothing to link to
+        translator_format_private = "<li>{2} ({1}) - {3}</li>"
         mime = "text/html"
         format_html_or_plain = format_html
         format_html_or_plain_join = format_html_join
@@ -478,6 +481,7 @@ def get_credits(request: AuthenticatedHttpRequest, path=None):
         wrap_format = "{}"
         language_format = "* {language}\n\n{translators}\n"
         translator_format = "    * {2} ({1}) <{0}> - {3}"
+        translator_format_private = "    * {2} ({1}) - {3}"
         mime = "text/plain"
         format_html_or_plain = format_plaintext
         format_html_or_plain_join = format_plaintext_join
@@ -491,9 +495,19 @@ def get_credits(request: AuthenticatedHttpRequest, path=None):
                 language=name,
                 translators=format_html_or_plain_join(
                     "\n",
-                    translator_format,
+                    "{}",
                     (
-                        (t["email"], t["username"], t["full_name"], t["change_count"])
+                        (
+                            format_html_or_plain(
+                                translator_format_private
+                                if is_private_commit_email(t["email"])
+                                else translator_format,
+                                t["email"],
+                                t["username"],
+                                t["full_name"],
+                                t["change_count"],
+                            ),
+                        )
                         for t in translators
                     ),
                 ),

@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -492,6 +493,36 @@ class ReportsComponentTest(BaseReportsTest):
             '<td><ul><li><a href="mailto:weblate@example.org">'
             "Weblate &lt;b&gt;Test&lt;/b&gt; (testuser)</a> - 1</li></ul></td>\n</tr>\n"
             "</tbody></table>",
+        )
+
+    @override_settings(SITE_DOMAIN="example.com")
+    def test_credits_view_html_private_email(self) -> None:
+        """Generated addresses never receive mail, so they are not linked."""
+        self.user.email = "testuser@users.noreply.example.com"
+        self.user.save(update_fields=["email"])
+        response = self.get_credits("html")
+        self.assertEqual(response.status_code, 200)
+        self.assertHTMLEqual(
+            response.content.decode(),
+            "<table><tbody>\n"
+            "<tr>\n<th>Czech</th>\n<td><ul>"
+            "<li>Weblate &lt;b&gt;Test&lt;/b&gt; (testuser) - 1</li>"
+            "</ul></td>\n</tr>\n</tbody></table>",
+        )
+
+    @override_settings(SITE_DOMAIN="example.com")
+    def test_credits_view_rst_private_email(self) -> None:
+        self.user.email = "testuser@users.noreply.example.com"
+        self.user.save(update_fields=["email"])
+        response = self.get_credits("rst")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.content.decode().strip(),
+            """
+* Czech
+
+    * Weblate <b>Test</b> (testuser) - 1
+""".strip(),
         )
 
     def test_credits_blank_period(self) -> None:
