@@ -22,7 +22,11 @@ from social_core.pipeline.partial import partial
 from social_core.utils import PARTIAL_TOKEN_SESSION_NAME
 
 from weblate.accounts.flows import PASSWORD_RESET_SCOPE_SESSION
-from weblate.accounts.models import AuditLog, VerifiedEmail
+from weblate.accounts.models import (
+    AuditLog,
+    VerifiedEmail,
+    format_private_commit_data,
+)
 from weblate.accounts.notifications import send_notification_email
 from weblate.accounts.templatetags.authnames import get_auth_name
 from weblate.accounts.utils import (
@@ -39,6 +43,7 @@ from weblate.auth.models import (
     User,
     get_anonymous,
 )
+from weblate.auth.utils import DISCORD_BACKEND
 from weblate.trans.defines import FULLNAME_LENGTH
 from weblate.utils import messages
 from weblate.utils.ratelimit import reset_rate_limit
@@ -146,6 +151,35 @@ def reauthenticate(
         }
         return redirect("confirm")
     return None
+
+
+def synthesize_private_email(backend, details, username, uid, **kwargs) -> None:
+    """
+    Give Discord accounts a private, undeliverable e-mail address.
+
+    Discord authentication is used without the ``email`` scope, so no address is
+    ever received from it. Weblate needs one internally, so build the same
+    private address which is used for commit metadata and record it as not
+    deliverable, the same way GitHub noreply addresses are handled.
+
+    This has to run after ``social_core.pipeline.user.get_username`` (to reuse the
+    resolved username) and before :func:`require_email` (which would otherwise
+    turn the missing address into a registration failure).
+    """
+    if backend.name != DISCORD_BACKEND or details.get("email"):
+        return
+
+    # The Discord snowflake stands in for the user ID, as there is no user yet at
+    # this point. It is only used by the template placeholder of the same name,
+    # which the default template does not use.
+    address = format_private_commit_data(
+        settings.PRIVATE_COMMIT_EMAIL_TEMPLATE, username, uid
+    )
+    if not address:
+        return
+
+    details["email"] = address
+    details["verified_emails"] = [(address, False)]
 
 
 @partial
@@ -576,41 +610,61 @@ def notify_connect(
         strategy.clean_partial_pipeline(session[PARTIAL_TOKEN_SESSION_NAME])
 
 
-def user_full_name(strategy, details, username, user=None, **kwargs) -> None:
-    """Update user full name using data from provider."""
-    if user and not user.full_name:
+def user_full_name(strategy, backend, details, username, user=None, **kwargs) -> None:
+    """
+    Update user full name using data from provider.
+
+    The name is normally only filled in when missing, to avoid overwriting what
+    the user has chosen. Discord is different: it is the source of truth for the
+    display name there, and the name is refreshed on every login, because handles
+    do change and credits are regenerated over the whole history. The username is
+    intentionally left alone, as it is used in URLs.
+    """
+    if user is None:
+        return
+
+    is_discord = backend.name == DISCORD_BACKEND
+    if user.full_name and not is_discord:
+        return
+
+    if is_discord:
+        # Discord reports the handle and nothing else, and that is the name to
+        # use. It has to come from the details: the resolved username argument is
+        # the stored one, which is deliberately not updated on a rename.
+        full_name = details.get("username") or ""
+    else:
         full_name = details.get("fullname") or ""
-        full_name = full_name.strip()
+    full_name = full_name.strip()
 
-        if not full_name and ("first_name" in details or "last_name" in details):
-            first_name = details.get("first_name") or ""
-            last_name = details.get("last_name") or ""
+    if not full_name and ("first_name" in details or "last_name" in details):
+        first_name = details.get("first_name") or ""
+        last_name = details.get("last_name") or ""
 
-            if first_name and first_name not in last_name:
-                full_name = f"{first_name} {last_name}"
-            elif first_name:
-                full_name = first_name
-            else:
-                full_name = last_name
+        if first_name and first_name not in last_name:
+            full_name = f"{first_name} {last_name}"
+        elif first_name:
+            full_name = first_name
+        else:
+            full_name = last_name
 
-        if CRUD_RE.match(full_name):
-            full_name = ""
+    if CRUD_RE.match(full_name):
+        full_name = ""
 
-        if not full_name and username:
-            full_name = username
+    if not full_name and username:
+        full_name = username
 
-        if not full_name and user.username:
-            full_name = user.username
+    if not full_name and user.username:
+        full_name = user.username
 
-        full_name = clean_fullname(full_name)
+    full_name = clean_fullname(full_name)
 
-        # The User model limit is 150 chars
-        if len(full_name) > FULLNAME_LENGTH:
-            full_name = full_name[:FULLNAME_LENGTH]
+    # The User model limit is 150 chars
+    if len(full_name) > FULLNAME_LENGTH:
+        full_name = full_name[:FULLNAME_LENGTH]
 
-        if full_name:
-            user.full_name = full_name
-            strategy.storage.user.changed(user)
+    if full_name and full_name != user.full_name:
+        user.full_name = full_name
+        strategy.storage.user.changed(user)
 
 
 def slugify_username(value):

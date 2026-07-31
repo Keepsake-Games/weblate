@@ -40,6 +40,10 @@ if TYPE_CHECKING:
     )
     from weblate.lang.models import Language
 
+# Name of the Discord authentication backend, which is the identity provider for
+# this deployment. See "Discord authentication" in docs/admin/auth.rst.
+DISCORD_BACKEND = "discord"
+
 
 def get_ordered_membership_limit_languages(
     membership: TeamMembership | Invitation,

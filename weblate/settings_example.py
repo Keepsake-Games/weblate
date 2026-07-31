@@ -218,8 +218,17 @@ BITBUCKETSERVER_CREDENTIALS = {}
 BITBUCKETCLOUD_CREDENTIALS = {}
 
 # Authentication configuration
+#
+# This deployment authenticates solely through Discord: identity, attribution and
+# authorization all key off the Discord account, and no e-mail address is ever
+# collected. See "Discord authentication" in docs/admin/auth.rst.
+#
+# Adding social_core.backends.email.EmailAuth back turns e-mail registration,
+# password reset and invitations back on. WeblateUserBackend is needed for core
+# Weblate functionality and has to stay.
 AUTHENTICATION_BACKENDS: tuple[str, ...] = (
-    "social_core.backends.email.EmailAuth",
+    "social_core.backends.discord.DiscordOAuth2",
+    # "social_core.backends.email.EmailAuth",
     # "social_core.backends.google.GoogleOAuth2",
     # "social_core.backends.github.GithubOAuth2",
     # "social_core.backends.github_enterprise.GithubEnterpriseOAuth2",
@@ -272,8 +281,18 @@ SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {"fields": "id,name,email"}
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = ""
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = ""
 
+# Discord: register the application at https://discord.com/developers/applications
+# and add https://WEBLATE SERVER/accounts/complete/discord/ as a redirect URL.
+SOCIAL_AUTH_DISCORD_KEY = ""
+SOCIAL_AUTH_DISCORD_SECRET = ""
+# The default scope ("identify") is deliberate: requesting "email" would hand us
+# an address we do not want to store. The synthesize_private_email pipeline step
+# below makes up an undeliverable one instead.
+# Keep the avatar hash around so avatars can be served from the Discord CDN.
+SOCIAL_AUTH_DISCORD_EXTRA_DATA = [("avatar", "avatar")]
+
 # Social auth settings
-SOCIAL_AUTH_PIPELINE = (
+SOCIAL_AUTH_PIPELINE: tuple[str, ...] = (
     "social_core.pipeline.social_auth.social_details",
     "social_core.pipeline.social_auth.social_uid",
     "social_core.pipeline.social_auth.auth_allowed",
@@ -281,12 +300,16 @@ SOCIAL_AUTH_PIPELINE = (
     "weblate.accounts.pipeline.store_params",
     "weblate.accounts.pipeline.verify_open",
     "social_core.pipeline.user.get_username",
+    "weblate.accounts.pipeline.synthesize_private_email",
     "weblate.accounts.pipeline.require_email",
     "social_core.pipeline.mail.mail_validation",
     "weblate.accounts.pipeline.revoke_mail_code",
     "weblate.accounts.pipeline.ensure_valid",
     "weblate.accounts.pipeline.remove_account",
-    "social_core.pipeline.social_auth.associate_by_email",
+    # social_core.pipeline.social_auth.associate_by_email is deliberately not
+    # used here: with Discord as the only identity provider there is no
+    # legitimate e-mail based account linking, and it would be an account
+    # takeover primitive if an address were ever collected again.
     "weblate.accounts.pipeline.reauthenticate",
     "weblate.accounts.pipeline.verify_username",
     "social_core.pipeline.user.create_user",
@@ -369,6 +392,11 @@ REGISTRATION_OPEN = True
 
 # Allow registration with disposable e-mail domains
 REGISTRATION_ALLOW_DISPOSABLE_EMAILS = False
+
+# Never expose an account e-mail address in commit metadata. Every account gets
+# {username}@users.noreply.{site_domain} from PRIVATE_COMMIT_EMAIL_TEMPLATE, which
+# matches the synthetic address Discord accounts are created with anyway.
+PRIVATE_COMMIT_EMAIL_OPT_IN = False
 
 # Project website restriction allowlist
 # PROJECT_WEB_RESTRICT_ALLOWLIST = {"trusted-project"}

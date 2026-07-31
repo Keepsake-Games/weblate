@@ -37,6 +37,7 @@ SOCIALS: dict[str, dict[str, StrOrPromise]] = {
     "fedora": {"name": "Fedora OpenID", "image": "fedora.svg"},
     "fedora-oidc": {"name": "Fedora", "image": "fedora.svg"},
     "facebook": {"name": "Facebook", "image": "facebook.svg"},
+    "discord": {"name": "Discord", "image": "discord.svg"},
     "github": {"name": "GitHub", "image": "github.svg"},
     "github-enterprise": {"name": "GitHub Enterprise", "image": "github.svg"},
     "github-org": {"name": "GitHub Organization", "image": "github.svg"},

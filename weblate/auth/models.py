@@ -49,6 +49,7 @@ from weblate.auth.permissions import (
     check_permission,
 )
 from weblate.auth.utils import (
+    DISCORD_BACKEND,
     create_anonymous,
     format_address,
     is_django_permission,
@@ -76,6 +77,7 @@ if TYPE_CHECKING:
 
     from django_otp.models import Device
     from social_core.backends.base import BaseAuth
+    from social_django.models import UserSocialAuth
 
     from weblate.accounts.models import Subscription
     from weblate.accounts.strategy import WeblateStrategy
@@ -1661,6 +1663,31 @@ class User(AbstractBaseUser):
                 pk=self.pk, social_auth__verifiedemail__email__iexact=email
             ).exists()
         )
+
+    @cached_property
+    def has_deliverable_email(self) -> bool:
+        """
+        Check whether the account e-mail address can actually receive mail.
+
+        Accounts created through an identity provider which does not hand out an
+        address get a synthetic one, recorded as not deliverable, see
+        :func:`weblate.accounts.pipeline.synthesize_private_email`. Sending to
+        those would only fill the mail queue with undeliverable messages.
+        """
+        if not self.email:
+            return False
+        # ruff: ignore[import-outside-top-level]
+        from weblate.accounts.models import VerifiedEmail
+
+        return not VerifiedEmail.objects.filter(
+            social__user=self, email__iexact=self.email, is_deliverable=False
+        ).exists()
+
+    def get_discord_association(self) -> UserSocialAuth | None:
+        """Return the Discord authentication association, if there is one."""
+        if self.pk is None or self.is_anonymous:
+            return None
+        return self.social_auth.filter(provider=DISCORD_BACKEND).first()
 
 
 class AutoGroup(models.Model):

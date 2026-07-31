@@ -31,6 +31,7 @@ from weblate.accounts.flows import (
     PASSWORD_RESET_SCOPE_WEBLATE_SERVICES,
     sign_password_reset_scope,
 )
+from weblate.accounts.forms import UserForm
 from weblate.accounts.models import VerifiedEmail
 from weblate.accounts.pipeline import ensure_valid, handle_invite, store_email
 from weblate.accounts.strategy import WeblateStrategy
@@ -75,6 +76,11 @@ GH_BACKENDS = (
 SAML_BACKENDS = (
     "social_core.backends.email.EmailAuth",
     "social_core.backends.saml.SAMLAuth",
+    "weblate.accounts.auth.WeblateUserBackend",
+)
+# Discord only, as it is deployed: no e-mail authentication at all
+DISCORD_BACKENDS = (
+    "social_core.backends.discord.DiscordOAuth2",
     "weblate.accounts.auth.WeblateUserBackend",
 )
 SAML_CERT = Path(get_test_file("saml.crt")).read_text(encoding="utf-8")
@@ -1567,6 +1573,112 @@ class RegistrationTest(BaseRegistrationTest):
         url = reverse("social:saml-metadata")
         response = self.client.get(url)
         self.assertContains(response, url)
+
+
+@override_settings(REGISTRATION_OPEN=True, REGISTRATION_CAPTCHA=False)
+class DiscordRegistrationTest(TestCase):
+    """Discord authenticates without handing out an e-mail address."""
+
+    def perform_discord_login(self, handle: str = "dogstar", avatar: str | None = None):
+        """Go through the Discord authentication flow."""
+        responses.add(
+            responses.POST,
+            "https://discord.com/api/oauth2/token",
+            json={"access_token": "123", "token_type": "Bearer"},
+        )
+        responses.add(
+            responses.GET,
+            "https://discord.com/api/users/@me",
+            json={"id": "424242424242424242", "username": handle, "avatar": avatar},
+        )
+        response = self.client.post(reverse("social:begin", args=("discord",)))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response["Location"].startswith("https://discord.com/api/oauth2/authorize")
+        )
+        query = parse_qs(urlparse(response["Location"]).query)
+        return_query = parse_qs(urlparse(query["redirect_uri"][0]).query)
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.get(
+                reverse("social:complete", args=("discord",)),
+                {
+                    "state": query["state"][0] or return_query["state"][0],
+                    "code": "XXX",
+                },
+                follow=True,
+            )
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    def test_register(self) -> None:
+        self.perform_discord_login()
+
+        user = User.objects.get(username="dogstar")
+        # The handle is used for both the username and the display name
+        self.assertEqual(user.full_name, "dogstar")
+        # No address is received, so a private one stands in for it
+        self.assertEqual(user.email, "dogstar@users.noreply.example.com")
+        self.assertFalse(user.has_deliverable_email)
+        # It is recorded as undeliverable, like GitHub noreply addresses are
+        verified = VerifiedEmail.objects.get(social__user=user)
+        self.assertEqual(verified.email, "dogstar@users.noreply.example.com")
+        self.assertFalse(verified.is_deliverable)
+        # Nothing may be sent to it
+        self.assertEqual(len(mail.outbox), 0)
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    def test_register_no_scope_requested(self) -> None:
+        """Only the identify scope is requested, never email."""
+        response = self.client.post(reverse("social:begin", args=("discord",)))
+        query = parse_qs(urlparse(response["Location"]).query)
+        self.assertNotIn("email", query.get("scope", [""])[0])
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    def test_rename_updates_display_name_only(self) -> None:
+        self.perform_discord_login()
+        self.client.logout()
+        # The mocks registered by the second call are consumed after the first
+        self.perform_discord_login(handle="starhound")
+
+        user = User.objects.get(username="dogstar")
+        # The display name follows the handle, so that credits stay recognizable
+        self.assertEqual(user.full_name, "starhound")
+        # The username does not, as it is used in URLs and for attribution
+        self.assertFalse(User.objects.filter(username="starhound").exists())
+        # The address is not rewritten either
+        self.assertEqual(user.email, "dogstar@users.noreply.example.com")
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    def test_identity_not_editable(self) -> None:
+        self.perform_discord_login()
+        user = User.objects.get(username="dogstar")
+
+        response = self.client.get(reverse("profile"))
+        rendered = response.context["userform"]
+        self.assertTrue(rendered.fields["username"].disabled)
+        self.assertTrue(rendered.fields["full_name"].disabled)
+
+        # A disabled field ignores submitted data, so nothing can be smuggled in
+        form = UserForm(
+            {
+                "username": "someone-else",
+                "full_name": "Someone Else",
+                "email": user.email,
+            },
+            instance=user,
+        )
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["username"], "dogstar")
+        self.assertEqual(form.cleaned_data["full_name"], "dogstar")
+
+    def test_identity_editable_without_discord(self) -> None:
+        user = User.objects.create_user("plain", "plain@example.org", "x")
+        form = UserForm(instance=user)
+        self.assertFalse(form.fields["username"].disabled)
+        self.assertFalse(form.fields["full_name"].disabled)
 
 
 class CookieRegistrationTest(BaseRegistrationTest):

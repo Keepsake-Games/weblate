@@ -10,8 +10,15 @@ from unittest import mock
 
 from django.test import SimpleTestCase, TestCase
 from django.test.utils import override_settings
+from social_django.models import UserSocialAuth
 
-from weblate.accounts.models import AUDIT_WARNING, NOTIFY_ACTIVITY, AuditLog, Profile
+from weblate.accounts.models import (
+    AUDIT_WARNING,
+    NOTIFY_ACTIVITY,
+    AuditLog,
+    Profile,
+    is_private_commit_email,
+)
 from weblate.auth.models import User
 
 
@@ -158,3 +165,52 @@ class ProfileTMTestCase(TestCase):
         user = User.objects.create_user(username="testnoautoclean")
         user.refresh_from_db()
         self.assertTrue(user.profile.contribute_personal_tm)
+
+
+class PrivateCommitEmailTestCase(SimpleTestCase):
+    @override_settings(SITE_DOMAIN="example.com")
+    def test_generated_address(self) -> None:
+        self.assertTrue(is_private_commit_email("dogstar@users.noreply.example.com"))
+
+    @override_settings(SITE_DOMAIN="example.com")
+    def test_real_address(self) -> None:
+        self.assertFalse(is_private_commit_email("someone@example.com"))
+        self.assertFalse(is_private_commit_email("someone@users.noreply.example.org"))
+
+    def test_blank_address(self) -> None:
+        # Nothing to contact either way
+        self.assertTrue(is_private_commit_email(""))
+
+    @override_settings(PRIVATE_COMMIT_EMAIL_TEMPLATE="")
+    def test_no_template(self) -> None:
+        self.assertFalse(is_private_commit_email("someone@example.com"))
+
+
+class DeliverableEmailTestCase(TestCase):
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(
+            username="dogstar", email="dogstar@users.noreply.example.com"
+        )
+
+    def test_without_verified_email(self) -> None:
+        """Accounts created outside of an identity provider can be mailed."""
+        self.assertTrue(self.user.has_deliverable_email)
+
+    def test_undeliverable(self) -> None:
+        social = UserSocialAuth.objects.create(
+            user=self.user, provider="discord", uid="424242424242424242"
+        )
+        social.verifiedemail_set.create(email=self.user.email, is_deliverable=False)
+        self.assertFalse(User.objects.get(pk=self.user.pk).has_deliverable_email)
+
+    def test_deliverable(self) -> None:
+        social = UserSocialAuth.objects.create(
+            user=self.user, provider="github", uid="1"
+        )
+        social.verifiedemail_set.create(email=self.user.email, is_deliverable=True)
+        self.assertTrue(User.objects.get(pk=self.user.pk).has_deliverable_email)
+
+    def test_blank_email(self) -> None:
+        self.user.email = None
+        self.user.save(update_fields=["email"])
+        self.assertFalse(User.objects.get(pk=self.user.pk).has_deliverable_email)

@@ -176,8 +176,16 @@ DOT_ATOM_RE = re.compile(
 )
 
 
-def format_private_commit_data(template: str, username: str, user_id: int) -> str:
-    """Format private commit data (email or name) using a template."""
+def format_private_commit_data(
+    template: str, username: str | None, user_id: int | str
+) -> str:
+    """
+    Format private commit data (email or name) using a template.
+
+    The user ID can also be an external identifier, such as when building an
+    address before the user exists, see
+    :func:`weblate.accounts.pipeline.synthesize_private_email`.
+    """
     if not template:
         return ""
     if username:
@@ -198,6 +206,23 @@ def format_private_commit_data(template: str, username: str, user_id: int) -> st
         site_domain=settings.SITE_DOMAIN.rsplit(":", 1)[0],
         site_title=settings.SITE_TITLE,
     )
+
+
+def is_private_commit_email(email: str) -> bool:
+    """
+    Check whether an address is a generated private one.
+
+    These are built from :setting:`PRIVATE_COMMIT_EMAIL_TEMPLATE` and never
+    receive mail, so they should not be offered as a way to contact anybody.
+    """
+    if not email:
+        return True
+    _, _, private_domain = format_private_commit_data(
+        settings.PRIVATE_COMMIT_EMAIL_TEMPLATE, "user", 0
+    ).rpartition("@")
+    if not private_domain:
+        return False
+    return email.casefold().endswith(f"@{private_domain}".casefold())
 
 
 def get_default_contribute_personal_tm() -> bool:

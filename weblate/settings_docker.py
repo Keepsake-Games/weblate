@@ -387,6 +387,18 @@ if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
     AUTHENTICATION_BACKENDS += ("social_core.backends.google.GoogleOAuth2",)
 
 
+SOCIAL_AUTH_DISCORD_KEY = get_env_str("WEBLATE_SOCIAL_AUTH_DISCORD_KEY")
+if SOCIAL_AUTH_DISCORD_KEY:
+    SOCIAL_AUTH_DISCORD_SECRET = get_env_str(
+        "WEBLATE_SOCIAL_AUTH_DISCORD_SECRET", required=True
+    )
+    # The default scope ("identify") is deliberate: requesting "email" would hand
+    # us an address we do not want to store. Keep the avatar hash so that avatars
+    # can be served from the Discord CDN.
+    SOCIAL_AUTH_DISCORD_EXTRA_DATA = [("avatar", "avatar")]
+    AUTHENTICATION_BACKENDS += ("social_core.backends.discord.DiscordOAuth2",)
+
+
 SOCIAL_AUTH_MUSICBRAINZ_KEY = get_env_str("WEBLATE_SOCIAL_AUTH_MUSICBRAINZ_KEY")
 if SOCIAL_AUTH_MUSICBRAINZ_KEY:
     SOCIAL_AUTH_MUSICBRAINZ_SECRET = get_env_str(
@@ -628,12 +640,16 @@ SOCIAL_AUTH_PIPELINE = [
     "weblate.accounts.pipeline.store_params",
     "weblate.accounts.pipeline.verify_open",
     "social_core.pipeline.user.get_username",
+    "weblate.accounts.pipeline.synthesize_private_email",
     "weblate.accounts.pipeline.require_email",
     "social_core.pipeline.mail.mail_validation",
     "weblate.accounts.pipeline.revoke_mail_code",
     "weblate.accounts.pipeline.ensure_valid",
     "weblate.accounts.pipeline.remove_account",
-    "social_core.pipeline.social_auth.associate_by_email",
+    # social_core.pipeline.social_auth.associate_by_email is deliberately not
+    # used here: with Discord as the only identity provider there is no
+    # legitimate e-mail based account linking, and it would be an account
+    # takeover primitive if an address were ever collected again.
     "weblate.accounts.pipeline.reauthenticate",
     "weblate.accounts.pipeline.verify_username",
     "social_core.pipeline.user.create_user",

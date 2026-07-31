@@ -446,6 +446,17 @@ class UserForm(forms.ModelForm):
             "UniqueUsernameField", self.fields["username"]
         ).valid = self.instance.username
 
+        if self.instance.get_discord_association() is not None:
+            # Discord owns the identity of these accounts: the name is refreshed
+            # from the handle on every login, and the username is the stable key
+            # used in URLs and for attribution. Letting either be edited here
+            # would only fight with the next sign-in.
+            for name in ("username", "full_name"):
+                self.fields[name].disabled = True
+                self.fields[name].help_text = gettext_lazy(
+                    "Managed by Discord; change your Discord handle instead."
+                )
+
         self.helper = FormHelper(self)
         self.helper.disable_csrf = True
         self.helper.form_tag = False

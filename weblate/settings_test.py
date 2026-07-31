@@ -127,6 +127,20 @@ AUTHENTICATION_BACKENDS = (
     "weblate.accounts.auth.WeblateUserBackend",
 )
 
+# The deployment settings are Discord only and never store a real e-mail address.
+# The inherited test suite exercises the e-mail based behavior, so restore the
+# upstream defaults here; Discord specific behavior is tested using explicit
+# override_settings instead.
+PRIVATE_COMMIT_EMAIL_OPT_IN = True
+
+# Restore e-mail based association, which the Discord only setup leaves out
+_social_auth_pipeline = list(SOCIAL_AUTH_PIPELINE)  # type: ignore[used-before-def]
+_social_auth_pipeline.insert(
+    _social_auth_pipeline.index("weblate.accounts.pipeline.reauthenticate"),
+    "social_core.pipeline.social_auth.associate_by_email",
+)
+SOCIAL_AUTH_PIPELINE = tuple(_social_auth_pipeline)
+
 # Disable random admin checks trigger
 BACKGROUND_ADMIN_CHECKS = False
 
