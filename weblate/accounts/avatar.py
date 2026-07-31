@@ -24,7 +24,12 @@ if TYPE_CHECKING:
     from weblate.auth.models import User
 
 
-def avatar_for_email(email: str, size: int = 80) -> str:
+DISCORD_CDN_URL = "https://cdn.discordapp.com/"
+# The Discord CDN only serves powers of two, from 16 up to 4096
+DISCORD_AVATAR_SIZES = (16, 32, 64, 128, 256, 512, 1024, 2048, 4096)
+
+
+def avatar_for_email(email: str | None, size: int = 80) -> str:
     """Generate url for avatar."""
     # Safely handle blank e-mail
     if not email:
@@ -51,10 +56,44 @@ def get_fallback_avatar(size: int) -> bytes:
     return Path(filename).read_bytes()
 
 
+def snap_discord_avatar_size(size: int) -> int:
+    """Round a size up to one the Discord CDN serves."""
+    return next(
+        (allowed for allowed in DISCORD_AVATAR_SIZES if allowed >= size),
+        DISCORD_AVATAR_SIZES[-1],
+    )
+
+
+def discord_avatar_url(user: User, size: int) -> str | None:
+    """
+    Generate URL of the Discord avatar of a user.
+
+    Returns None when the account has no Discord association or no avatar set
+    there, in which case the generic avatar handling applies.
+    """
+    association = user.get_discord_association()
+    if association is None:
+        return None
+    avatar_hash = (association.extra_data or {}).get("avatar")
+    if not avatar_hash:
+        return None
+    querystring = urlencode({"size": str(snap_discord_avatar_size(size))})
+    return f"{DISCORD_CDN_URL}avatars/{association.uid}/{avatar_hash}.png?{querystring}"
+
+
+def get_avatar_url(user: User, size: int) -> str:
+    """Generate URL of the avatar of a user."""
+    return discord_avatar_url(user, size) or avatar_for_email(user.email, size)
+
+
 def get_avatar_image(user: User, size: int) -> bytes:
     """Return avatar image from cache (if available) or download it."""
     username = user.username
-    cache_key = f"avatar-img-{username}-{size!s}"
+    url = get_avatar_url(user, size)
+    # The URL is part of the cache key so that a changed Discord avatar shows up
+    # right away instead of only once the cached image expires.
+    url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()[:12]
+    cache_key = f"avatar-img-{username}-{size!s}-{url_hash}"
 
     # Try using avatar specific cache if available
     try:
@@ -65,7 +104,7 @@ def get_avatar_image(user: User, size: int) -> bytes:
     image = cache.get(cache_key)
     if image is None:
         try:
-            image = download_avatar_image(user.email, size)
+            image = download_avatar_url(url)
             cache.set(cache_key, image)
         except (OSError, CertificateError):
             report_error(f"Could not fetch avatar for {username}")
@@ -74,11 +113,15 @@ def get_avatar_image(user: User, size: int) -> bytes:
     return image
 
 
-def download_avatar_image(email: str, size: int) -> bytes:
+def download_avatar_url(url: str) -> bytes:
     """Download avatar image from remote server."""
-    url = avatar_for_email(email, size)
     response = fetch_url("get", url, timeout=1.0)
     return response.content
+
+
+def download_avatar_image(email: str, size: int) -> bytes:
+    """Download gravatar image for an e-mail address."""
+    return download_avatar_url(avatar_for_email(email, size))
 
 
 def get_user_display(user: User | None, icon: bool = True, link: bool = False) -> str:
