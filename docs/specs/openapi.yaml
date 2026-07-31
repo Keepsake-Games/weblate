@@ -2674,6 +2674,10 @@ paths:
           * `102` - Remote repository update failed
         explode: true
         style: form
+      - in: query
+        name: author
+        schema:
+          type: string
       - name: page
         required: false
         in: query
@@ -29375,6 +29379,11 @@ components:
           type: string
           format: uri
           readOnly: true
+        author_username:
+          type:
+          - string
+          - 'null'
+          readOnly: true
         timestamp:
           type: string
           format: date-time
@@ -29402,6 +29411,7 @@ components:
       required:
       - action_name
       - author
+      - author_username
       - component
       - id
       - timestamp

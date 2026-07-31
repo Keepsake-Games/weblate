@@ -431,6 +431,14 @@ Creates an ``admin`` account with a random password, unless it is specified.
 
     Update the existing user (you can use this to change passwords).
 
+    .. warning::
+
+        This also overwrites the e-mail address and the visible name of the
+        account with the ``--email`` and ``--name`` values, which default to
+        ``admin@example.com`` and ``Weblate Admin``. Do not use it to grant
+        rights to an account created by an identity provider; add the account to
+        a team with the needed role instead, see :ref:`access-control`.
+
 dump_memory
 -----------
 

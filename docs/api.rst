@@ -2722,7 +2722,11 @@ Changes
 
         Change object attributes are documented at :http:get:`/api/changes/(int:id)/`.
 
-    :query string user: Username of the user to filter by
+    :query string user: Username of the user who performed the action to filter by
+    :query string author: Username of the author of the translation to filter by.
+                          Prefer this over ``user`` for attribution: accepting a
+                          suggestion records the reviewer as the user and the
+                          original translator as the author.
     :query int action: Action to filter, can be used several times
     :query timestamp timestamp_after: ISO 8601 formatted timestamp to list changes after
     :query timestamp timestamp_before: ISO 8601 formatted timestamp to list changes before
@@ -2738,12 +2742,17 @@ Changes
     :>json string component: URL of a related component object
     :>json string user: URL of a related user object
     :>json string author: URL of a related author object
+    :>json string author_username: username of the author, spelled out so that it
+                                   does not have to be parsed out of the URL
     :>json timestamp timestamp: event timestamp
     :>json int action: numeric identification of action
     :>json string action_name: text description of action
     :>json string target: event changed text
     :>json string old: previous text
-    :>json object details: additional details about the change
+    :>json object details: additional details about the change. For accepted and
+                           rejected suggestions this includes ``voters``, listing
+                           the usernames which voted, grouped into ``approve`` and
+                           ``reject``; see :ref:`discord-attribution`
     :>json int id: change identifier
 
 Screenshots

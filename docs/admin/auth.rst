@@ -387,6 +387,56 @@ You will need following:
 
    :doc:`psa:backends/azuread`
 
+.. _discord-auth:
+
+Discord
+~~~~~~~
+
+For using Discord OAuth 2, you need to register an application at
+<https://discord.com/developers/applications>.
+
+The redirect URL is ``https://WEBLATE SERVER/accounts/complete/discord/``.
+
+.. code-block:: python
+
+    # Authentication configuration
+    AUTHENTICATION_BACKENDS = (
+        "social_core.backends.discord.DiscordOAuth2",
+        "weblate.accounts.auth.WeblateUserBackend",
+    )
+
+    # Social auth backends setup
+    SOCIAL_AUTH_DISCORD_KEY = ""
+    SOCIAL_AUTH_DISCORD_SECRET = ""
+
+    # Serve user avatars from the Discord CDN
+    SOCIAL_AUTH_DISCORD_EXTRA_DATA = [("avatar", "avatar")]
+
+The default ``identify`` scope is used, so Discord does not disclose any e-mail
+address. Weblate needs an address internally, and generates an undeliverable one
+from :setting:`PRIVATE_COMMIT_EMAIL_TEMPLATE` instead, for example
+``handle@users.noreply.example.com``. Such accounts never receive notification
+e-mails, and password reset is not available to them because there is nothing to
+reset; the Discord account is the only credential.
+
+The Discord handle becomes both the username and the display name. The username
+is kept as it was at sign-up, because it is used in URLs and is the stable key
+for attribution, while the display name is refreshed from Discord on every
+sign-in so that renames are reflected. Both are therefore read-only in the user
+profile.
+
+Granting rights to an account works as it does otherwise: sign in through Discord
+once to create the account, then add it to a team carrying the needed role, see
+:ref:`access-control`. Automatic team assignment is not usable here, because it
+matches on the e-mail address and all generated addresses share a single domain.
+
+.. include:: /snippets/oauth-site.rst
+
+.. seealso::
+
+   :ref:`discord-attribution`,
+   :doc:`psa:backends/discord`
+
 .. _slack-auth:
 
 Slack

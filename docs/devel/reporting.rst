@@ -67,6 +67,52 @@ and lists all contributors for a given language:
 
     The number in parenthesis indicates the number of contributions in given period.
 
+.. _discord-attribution:
+
+Attributing contributions
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Credits and any release notes assembled from :http:get:`/api/changes/` should
+attribute the **author** of a change rather than the user who performed it. The
+two are usually the same person, but not always: accepting a suggestion records
+the reviewer as the user and the original translator as the author. Credits use
+the author already; when querying changes directly, filter and group by the
+``author`` field.
+
+Two things silently produce wrong attribution:
+
+* Generating a credits report without the :guilabel:`Reports` permission on the
+  scope produces a report covering only the requesting user, rather than
+  failing. An automated consumer needs that permission, or the credits will look
+  empty for no apparent reason.
+
+* Sending ``author_email`` when uploading a file creates a separate account for
+  that address, which then shows up in credits as its own contributor. Leave it
+  unset to attribute uploads to the account performing them.
+
+With :ref:`discord-auth`, the Discord handle is reported both as ``username`` and
+as ``full_name``. Use ``full_name`` for display, as it follows renames, and
+``username`` as the stable key to join on. The ``email`` field in the credits
+data holds a generated, undeliverable address and is not useful for contacting
+anybody.
+
+Crediting reviewers
+^^^^^^^^^^^^^^^^^^^
+
+The author is the person who wrote the translation, so review effort is
+attributed separately depending on the workflow:
+
+* With :ref:`peer-review`, the people who voted are recorded on the accepting or
+  rejecting change, under a ``voters`` key in ``details``, grouped as ``approve``
+  and ``reject``. The person who suggested is left out, as they are already the
+  author. Votes are removed together with the suggestion, so this is the only
+  record of them; nothing can be reconstructed later.
+
+* With :ref:`reviews`, approving is a content change of its own, credited to the
+  reviewer. A string translated by one person and approved by another therefore
+  produces two credited changes. Filter the action out if only translation work
+  should count.
+
 .. _stats:
 
 
