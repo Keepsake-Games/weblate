@@ -9,19 +9,31 @@ Unity localization tool over the REST API.
 
 **Current base: `weblate-2026.7.1`.**
 
-The fork is always rebased onto a tagged upstream *release*, never onto `main`.
-Two reasons:
+`main` is the deployable branch: it is our commits sitting directly on top of an
+upstream release tag. Upstream itself is not mirrored in a local branch; it is
+tracked through the `upstream` remote's own refs.
+
+```sh
+git remote add upstream https://github.com/WeblateOrg/weblate.git
+git fetch upstream --tags
+git tag --list 'weblate-20*' | sort -V | tail -5
+git log --oneline weblate-2026.7.1..main   # exactly our commits, nothing else
+```
+
+The fork is always rebased onto a tagged upstream *release*, never onto upstream's
+`main`. Two reasons:
 
 * The production image is built `FROM weblate/weblate:<tag>`, and that image
   contains a released version. Basing our code on a `.dev0` snapshot means the
   code and the dependency set in the image disagree.
 * A release tag gives a fixed point to distinguish our bugs from upstream's.
 
-```sh
-git remote add upstream https://github.com/WeblateOrg/weblate.git
-git fetch upstream --tags
-git tag --list 'weblate-20*' | sort -V | tail -5
-```
+**Consequence of that layout: `main` gets rebased, so its history is rewritten on
+every upstream upgrade.** Pushing an upgrade needs
+`git push --force-with-lease origin main`, and anyone else with a clone recovers
+with `git fetch origin && git reset --hard origin/main` rather than a merge. Do
+not merge `origin/main` into a stale local `main`; that resurrects the pre-rebase
+commits as duplicates.
 
 ## What the fork changes
 
@@ -41,10 +53,19 @@ git-ignored; it holds the Discord client secret.
 
 ## Rebasing onto a new release
 
+Work on a scratch branch so a failed upgrade never leaves `main` half-rebased:
+
 ```sh
 git fetch upstream --tags
-git rebase --onto weblate-<new> weblate-<old> keepsake/discord-auth
+git switch -c upgrade-<new> main
+git rebase --onto weblate-<new> weblate-<old> upgrade-<new>
+# verify (see "Verifying a build"), then:
+git switch main && git reset --hard upgrade-<new>
+git push --force-with-lease origin main
 ```
+
+`weblate-<old>` is the tag named at the top of this file. Update it there in the
+same commit as the upgrade, or the next person cannot compute the rebase range.
 
 Conflicts concentrate in five files, because upstream refactors around them:
 
