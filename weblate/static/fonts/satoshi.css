@@ -1,0 +1,92 @@
+/* Satoshi, self-hosted so the appearance settings can name it.
+ *
+ * One family with real weights, rather than the family-per-weight shape the
+ * generated stylesheet from the foundry uses: Bootstrap asks for 500, 600 and
+ * 700 all over the interface, and a family that only declares 400 would get
+ * synthetic bold instead of the real cut.
+ *
+ * Only the weights the page actually uses get downloaded, so declaring all of
+ * them costs nothing at runtime.
+ */
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("satoshi/Satoshi-Light.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url("satoshi/Satoshi-LightItalic.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("satoshi/Satoshi-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("satoshi/Satoshi-Italic.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("satoshi/Satoshi-Medium.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url("satoshi/Satoshi-MediumItalic.woff") format("woff");
+}
+
+/* Bootstrap's 600 has no cut of its own; bold reads better than a synthesised
+ * semibold. */
+@font-face {
+  font-family: "Satoshi";
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("satoshi/Satoshi-Bold.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: italic;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("satoshi/Satoshi-BoldItalic.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("satoshi/Satoshi-Black.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Satoshi";
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url("satoshi/Satoshi-BlackItalic.woff") format("woff");
+}

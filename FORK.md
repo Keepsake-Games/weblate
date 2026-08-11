@@ -48,6 +48,7 @@ Each commit is self-contained:
 | `feat(trans): credit the voters on an accepted suggestion` | `suggestion.py` |
 | `feat(accounts): watch configured projects from the first login` | `INITIAL_WATCHED_PROJECTS` |
 | `feat(ui): make the navigation search box searchable` | `base.html`, `loader-bootstrap.js` |
+| `feat(ui): self-host the Satoshi font family` | `static/fonts/`, `meta-css.html` |
 | `docs: document Discord auth and the attribution contract` | `docs/` |
 
 Anything not in that list is upstream. `weblate/settings.py` is local and
@@ -65,6 +66,24 @@ deliberately unwatches stays unwatched.
 The default is empty, which is upstream behaviour, and `settings_example.py`
 leaves it commented out: `settings_test.py` inherits from it, and two upstream
 dashboard tests assert that a fresh account watches nothing.
+
+### Satoshi
+
+`weblate/static/fonts/satoshi.css` declares the family and
+`weblate/static/fonts/satoshi/` holds the `woff` files, linked from the
+`{% compress css %}` block in `snippets/meta-css.html`. Serving it is all the
+fork does; which font the interface uses is a runtime choice under
+**Manage → Appearance**, where *Page font* and *Header font* are free-text CSS
+`font-family` values. Set them to `Satoshi, sans-serif`.
+
+Self-hosted rather than pulled from a CDN because the CSP is `font-src 'self'`.
+The declarations use one family with real weights, not the family-per-weight
+shape the foundry's generated stylesheet has, so Bootstrap's 500/600/700 get the
+actual cuts instead of synthetic bold.
+
+Adding static files and editing a `{% compress %}` block is safe despite
+`COMPRESS_OFFLINE`, because the official image's entrypoint runs
+`collectstatic --clear` and `compress --force` on every container start.
 
 ### Navigation search box
 
