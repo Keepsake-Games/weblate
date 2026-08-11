@@ -37,7 +37,7 @@ commits as duplicates.
 
 ## What the fork changes
 
-Six commits, each self-contained:
+Each commit is self-contained:
 
 | Commit | Area |
 | --- | --- |
@@ -46,10 +46,24 @@ Six commits, each self-contained:
 | `feat(accounts): serve avatars from the Discord CDN` | `avatar.py` |
 | `feat(api): filter changes by author and expose the author handle` | `ChangeFilter`, `ChangeSerializer` |
 | `feat(trans): credit the voters on an accepted suggestion` | `suggestion.py` |
+| `feat(accounts): watch configured projects from the first login` | `INITIAL_WATCHED_PROJECTS` |
 | `docs: document Discord auth and the attribution contract` | `docs/` |
 
 Anything not in that list is upstream. `weblate/settings.py` is local and
 git-ignored; it holds the Discord client secret.
+
+### `INITIAL_WATCHED_PROJECTS`
+
+A list of project slugs, or `["*"]`, that a brand new account starts out
+watching; `WEBLATE_INITIAL_WATCHED_PROJECTS` in the Docker environment. Watching
+is what puts a project in the navigation menu and on the dashboard, so on a
+single-project server this is the difference between the project being one click
+away and three. Applied once, when the account is created, so a member who
+deliberately unwatches stays unwatched.
+
+The default is empty, which is upstream behaviour, and `settings_example.py`
+leaves it commented out: `settings_test.py` inherits from it, and two upstream
+dashboard tests assert that a fresh account watches nothing.
 
 ## Rebasing onto a new release
 

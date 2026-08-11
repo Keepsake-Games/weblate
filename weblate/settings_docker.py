@@ -1517,6 +1517,12 @@ DEFAULT_AUTO_WATCH = get_env_bool(
     "WEBLATE_DEFAULT_AUTO_WATCH", accounts_defaults.DEFAULT_AUTO_WATCH
 )
 
+# Comma separated project slugs, or "*" for all of them
+INITIAL_WATCHED_PROJECTS = get_env_list(
+    "WEBLATE_INITIAL_WATCHED_PROJECTS",
+    list(accounts_defaults.DEFAULT_INITIAL_WATCHED_PROJECTS),
+)
+
 DEFAULT_SHARED_TM = get_env_bool(
     "WEBLATE_DEFAULT_SHARED_TM", trans_defaults.DEFAULT_SHARED_TM
 )

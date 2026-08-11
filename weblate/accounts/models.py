@@ -142,6 +142,14 @@ class WeblateAccountsConf(AppConf):
     # Auto-watch setting for new users
     DEFAULT_AUTO_WATCH = defaults.DEFAULT_AUTO_WATCH
 
+    # Projects a brand new account starts out watching, by slug. "*" means every
+    # project. Watching is what puts a project in the navigation menu and on the
+    # dashboard, so on a single-project server this is the difference between the
+    # project being one click away and three.
+    INITIAL_WATCHED_PROJECTS: ClassVar[list[str]] = list(
+        defaults.DEFAULT_INITIAL_WATCHED_PROJECTS
+    )
+
     CONTACT_FORM = defaults.DEFAULT_CONTACT_FORM
 
     PRIVATE_COMMIT_EMAIL_TEMPLATE = defaults.DEFAULT_PRIVATE_COMMIT_EMAIL_TEMPLATE
@@ -1454,6 +1462,29 @@ def post_login_handler(
     user.profile.fixup_profile(request)
 
 
+def add_initial_watched_projects(user: User) -> None:
+    """
+    Watch the configured projects on behalf of a brand new account.
+
+    Watching is what puts a project in the navigation menu and on the dashboard,
+    so without this a newcomer has to find it through "Browse all projects" first.
+    No ACL filtering is done here: User.watched_projects intersects the watch list
+    with the projects the user may see on every read, so watching a project they
+    cannot access shows them nothing.
+    """
+    slugs = settings.INITIAL_WATCHED_PROJECTS
+    if not slugs:
+        return
+
+    # ruff: ignore[import-outside-top-level]
+    from weblate.trans.models import Project
+
+    projects = (
+        Project.objects.all() if "*" in slugs else Project.objects.filter(slug__in=slugs)
+    )
+    user.profile.watched.add(*projects)
+
+
 @receiver(post_save, sender=User)
 @disable_for_loaddata
 def create_profile_callback(sender, instance, created=False, **kwargs) -> None:
@@ -1471,3 +1502,4 @@ def create_profile_callback(sender, instance, created=False, **kwargs) -> None:
         # Create subscriptions
         if not instance.is_anonymous and not instance.is_bot:
             create_default_notifications(instance)
+            add_initial_watched_projects(instance)

@@ -398,6 +398,12 @@ REGISTRATION_ALLOW_DISPOSABLE_EMAILS = False
 # matches the synthetic address Discord accounts are created with anyway.
 PRIVATE_COMMIT_EMAIL_OPT_IN = False
 
+# Projects a new account starts out watching, by slug, or ["*"] for every project.
+# Watched projects are the ones listed in the navigation menu and on the dashboard,
+# so this is what keeps a single-project server from hiding its only project behind
+# "Browse all projects". Set through WEBLATE_INITIAL_WATCHED_PROJECTS in production.
+# INITIAL_WATCHED_PROJECTS = ["*"]
+
 # Project website restriction allowlist
 # PROJECT_WEB_RESTRICT_ALLOWLIST = {"trusted-project"}
 

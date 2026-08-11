@@ -20,6 +20,7 @@ from weblate.accounts.models import (
     is_private_commit_email,
 )
 from weblate.auth.models import User
+from weblate.trans.models import Project
 
 
 class AuditLogTestCase(SimpleTestCase):
@@ -214,3 +215,30 @@ class DeliverableEmailTestCase(TestCase):
         self.user.email = None
         self.user.save(update_fields=["email"])
         self.assertFalse(User.objects.get(pk=self.user.pk).has_deliverable_email)
+
+
+class InitialWatchedProjectsTestCase(TestCase):
+    def setUp(self) -> None:
+        self.project = Project.objects.create(name="Hello", slug="hello")
+        self.other = Project.objects.create(name="Bye", slug="bye")
+
+    def create(self) -> User:
+        return User.objects.create_user(username="dogstar")
+
+    def test_default(self) -> None:
+        """Upstream behaviour: a new account watches nothing."""
+        self.assertEqual(list(self.create().profile.watched.all()), [])
+
+    @override_settings(INITIAL_WATCHED_PROJECTS=["hello"])
+    def test_by_slug(self) -> None:
+        self.assertEqual(list(self.create().profile.watched.all()), [self.project])
+
+    @override_settings(INITIAL_WATCHED_PROJECTS=["*"])
+    def test_all(self) -> None:
+        self.assertEqual(
+            set(self.create().profile.watched.all()), {self.project, self.other}
+        )
+
+    @override_settings(INITIAL_WATCHED_PROJECTS=["nonexistent"])
+    def test_unknown_slug(self) -> None:
+        self.assertEqual(list(self.create().profile.watched.all()), [])
