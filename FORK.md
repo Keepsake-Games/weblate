@@ -47,6 +47,7 @@ Each commit is self-contained:
 | `feat(api): filter changes by author and expose the author handle` | `ChangeFilter`, `ChangeSerializer` |
 | `feat(trans): credit the voters on an accepted suggestion` | `suggestion.py` |
 | `feat(accounts): watch configured projects from the first login` | `INITIAL_WATCHED_PROJECTS` |
+| `feat(ui): make the navigation search box searchable` | `base.html`, `loader-bootstrap.js` |
 | `docs: document Discord auth and the attribution contract` | `docs/` |
 
 Anything not in that list is upstream. `weblate/settings.py` is local and
@@ -64,6 +65,13 @@ deliberately unwatches stays unwatched.
 The default is empty, which is upstream behaviour, and `settings_example.py`
 leaves it commented out: `settings_test.py` inherits from it, and two upstream
 dashboard tests assert that a fresh account watches nothing.
+
+### Navigation search box
+
+Upstream's box is a typeahead only. autoComplete.js swallows Enter unless its
+`submit` option is set, so pressing Enter does nothing at all, on any Weblate
+instance. The form now points at `search`, and a keydown handler submits it when
+no suggestion is highlighted, leaving Enter-to-pick-a-suggestion intact.
 
 ## Rebasing onto a new release
 
@@ -88,6 +96,8 @@ Conflicts concentrate in five files, because upstream refactors around them:
 * `weblate/api/views.py` for `ChangeFilter`
 * `weblate/accounts/pipeline.py`
 * `weblate/settings_example.py` and `weblate/settings_docker.py`
+* `weblate/static/loader-bootstrap.js` and `weblate/templates/base.html` for the
+  navigation search box
 
 When a conflict shows an empty upstream side against a large block of ours, the
 cause is almost always that upstream moved the surrounding code in a release we

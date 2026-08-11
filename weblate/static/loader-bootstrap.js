@@ -2255,6 +2255,21 @@ onReady(() => {
     },
   });
 
+  /* Enter in the site-wide search box runs a string search.
+   *
+   * autoComplete.js swallows Enter unless its "submit" option is set, and with a
+   * highlighted suggestion Enter should pick that suggestion rather than search.
+   * So submit the form by hand, only when nothing is highlighted. */
+  siteSearch.input.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Enter" &&
+      !(siteSearch.cursor >= 0) &&
+      siteSearch.input.value.trim().length > 0
+    ) {
+      siteSearch.input.form?.submit();
+    }
+  });
+
   /* Workflow customization form */
   document.querySelectorAll("#id_workflow-enable").forEach((enableInput) => {
     const updateWorkflowVisibility = () => {

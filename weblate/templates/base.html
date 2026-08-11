@@ -129,11 +129,12 @@
 
           <!-- Collect the nav links, forms, and other content for toggling -->
           <div class="collapse navbar-collapse" id="wl-navbar-main">
-            <form class="navbar-form">
+            <form class="navbar-form" action="{% url 'search' %}" method="get">
               <div class="form-group">
                 <input type="text"
                        class="form-control"
                        id="sitewide-search"
+                       name="q"
                        placeholder="{% translate "Search" %}">
               </div>
             </form>
