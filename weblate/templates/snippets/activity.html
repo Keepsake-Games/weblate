@@ -4,7 +4,7 @@
   <div class="card-header">
     <span class="float-end">
       <svg height="8" width="8">
-        <rect x="0" y="0" width="8" height="8" fill="#2ECCAA"></rect>
+        <rect x="0" y="0" width="8" height="8" fill="#78BFE1"></rect>
       </svg>
       {% translate "Last 12 months" %}
       <svg height="8" width="8">
@@ -33,7 +33,7 @@
           </a>
           <a href="{{ changes_url }}?start_date={{ activity.start_date.isoformat }}&amp;end_date={{ activity.end_date.isoformat }}">
             <svg height="140" width="25%">
-              <rect x="0" y="{{ activity.current_offset }}" width="100%" height="{{ activity.current_height }}" fill="#2ECCAA">
+              <rect x="0" y="{{ activity.current_offset }}" width="100%" height="{{ activity.current_height }}" fill="#78BFE1">
               <title>{% blocktranslate count _count=activity.current with count=activity.current|intcomma %}{{ count }} change{% plural %}{{ count }} changes{% endblocktranslate %}</title>
               </rect>
             </svg>

@@ -107,7 +107,6 @@ path = [
   "docs/images/logo-text.svg",
   "weblate/static/access/**.svg",
   "weblate/static/email-logo**.png",
-  "weblate/static/favicon.ico",
   "weblate/static/logo-**.png",
   "weblate/static/weblate**.png",
   "weblate/static/weblate**.svg",
@@ -166,3 +165,9 @@ path = "client/yarn.lock"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Michal Čihař <michal@weblate.org>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = "weblate/static/fonts/noto/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2014-2020 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'"
+SPDX-License-Identifier = "OFL-1.1"

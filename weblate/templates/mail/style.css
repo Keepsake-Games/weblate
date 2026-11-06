@@ -258,11 +258,11 @@ pre {
   line-height: 36px;
 }
 a {
-  color: #107a62;
+  color: #15739f;
   text-decoration: underline;
 }
 a.button {
-  background: #158068;
+  background: #1b79a4;
   height: 50px;
   min-width: 180px;
   color: #fff;
@@ -282,8 +282,8 @@ a.button {
 }
 a.button:hover {
   background-color: #fff;
-  color: #158068;
-  border-color: #158068;
+  color: #1b79a4;
+  border-color: #1b79a4;
 }
 .translatetext {
   background-color: #eee;

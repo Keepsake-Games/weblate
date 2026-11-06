@@ -94,6 +94,12 @@ label {
   font-weight: 600;
 }
 
+.navbar a.navbar-brand:hover,
+.navbar a.navbar-brand:focus,
+.navbar a.navbar-brand:active {
+  color: var(--bs-navbar-hover-color);
+}
+
 .navbar-brand > svg {
   display: inline-block;
   margin: 0 10px 0 0;
@@ -2240,7 +2246,7 @@ input.color_edit:checked + label {
   min-width: 6px;
 }
 .unit-state-translated {
-  background-color: #158068 !important;
+  background-color: #1b79a4 !important;
 }
 .unit-state-bad {
   background-color: #cc3d20 !important;
@@ -2249,7 +2255,7 @@ input.color_edit:checked + label {
   background-color: #e9eaec !important;
 }
 .unit-state-approved {
-  background-color: #107a62 !important;
+  background-color: #15739f !important;
 }
 .unit-state-save-timeout {
   animation: morph-state 2s infinite;
@@ -2734,8 +2740,8 @@ table.table-simple tbody#glossary-terms .alert-info {
 }
 
 .navbar-nav .nav-link.show {
-  color: var(--wl-color-bg);
-  background-color: var(--wl-color-primary);
+  color: var(--wl-nav-open-text);
+  background-color: var(--wl-nav-open-bg);
 }
 
 .dropdown-toggle::after {

@@ -1,0 +1,101 @@
+/* Noto Sans for Chinese, Japanese and Korean, the faces the game renders them in,
+ * so translators see their strings the way players will.
+ *
+ * Applied by language rather than by unicode-range: the game picks the face per
+ * language, and Han characters differ in shape between the Chinese, Japanese and
+ * Korean faces, so the glyphs alone cannot choose correctly.
+ *
+ * Selectors cover Weblate's language codes on translation text and editors
+ * ("zh_Hans", "zh_Hant_HK") as well as hyphenated BCP 47 codes. Matches
+ * are exact or followed by a separator, because "ja", "ko" and "zh" also begin
+ * "jam", "kok" and "zha". Hong Kong comes after Traditional so it wins on
+ * "zh_Hant_HK".
+ *
+ * Regular only: none of the places translations are shown use bold. local()
+ * first, so a machine with the fonts installed downloads nothing.
+ */
+
+@font-face {
+  font-family: "Noto Sans SC";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Noto Sans SC"), local("NotoSansSC-Regular"),
+    url("noto/NotoSansSC-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Noto Sans TC";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Noto Sans TC"), local("NotoSansTC-Regular"),
+    url("noto/NotoSansTC-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Noto Sans HK";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Noto Sans HK"), local("NotoSansHK-Regular"),
+    url("noto/NotoSansHK-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Noto Sans JP";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Noto Sans JP"), local("NotoSansJP-Regular"),
+    url("noto/NotoSansJP-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Noto Sans KR";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Noto Sans KR"), local("NotoSansKR-Regular"),
+    url("noto/NotoSansKR-Regular.woff2") format("woff2");
+}
+
+[lang="zh" i],
+[lang^="zh_Hans" i],
+[lang^="zh-Hans" i],
+[lang^="zh_CN" i],
+[lang^="zh-CN" i],
+[lang^="zh_SG" i],
+[lang^="zh-SG" i] {
+  font-family: "Noto Sans SC", sans-serif;
+}
+
+[lang^="zh_Hant" i],
+[lang^="zh-Hant" i],
+[lang^="zh_TW" i],
+[lang^="zh-TW" i] {
+  font-family: "Noto Sans TC", sans-serif;
+}
+
+[lang^="zh_Hant_HK" i],
+[lang^="zh-Hant-HK" i],
+[lang^="zh_HK" i],
+[lang^="zh-HK" i],
+[lang^="zh_Hant_MO" i],
+[lang^="zh-Hant-MO" i],
+[lang^="zh_MO" i],
+[lang^="zh-MO" i] {
+  font-family: "Noto Sans HK", sans-serif;
+}
+
+[lang="ja" i],
+[lang^="ja_" i],
+[lang^="ja-" i] {
+  font-family: "Noto Sans JP", sans-serif;
+}
+
+[lang="ko" i],
+[lang^="ko_" i],
+[lang^="ko-" i] {
+  font-family: "Noto Sans KR", sans-serif;
+}

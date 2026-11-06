@@ -23,13 +23,13 @@
   --wl-color-border: #484d50;
   --wl-color-border-strong: #444b4d;
   --wl-color-border-input: #444b4d;
-  --wl-color-link: #6cf8d8;
+  --wl-color-link: #c7ebeb;
   --wl-color-link-hover: #ddd9d1;
-  --wl-color-primary: #1c8f75;
-  --wl-color-primary-strong: #124437;
-  --wl-color-accent-bg: #1c8f75;
-  --wl-color-success: #29b396;
-  --wl-color-success-soft: rgba(28, 143, 117, 0.6);
+  --wl-color-primary: #2487b6;
+  --wl-color-primary-strong: #164154;
+  --wl-color-accent-bg: #2487b6;
+  --wl-color-success: #4baad6;
+  --wl-color-success-soft: rgba(36, 135, 182, 0.6);
   --wl-color-danger: #ac2109;
   --wl-color-danger-soft: #8f0303;
   --wl-color-warning: #dabc87;
@@ -50,7 +50,7 @@
   --wl-color-progress-dark: #575f62;
   --wl-color-progress-stripe: #1e2122;
   --wl-color-tribute-bg: #282b2c;
-  --wl-color-search-icon: #6cf8d8;
+  --wl-color-search-icon: #c7ebeb;
   --wl-color-divisor: #d5d0c7;
   --wl-color-warning-bg-soft: #403607;
   --wl-color-danger-bg-soft: #3e1818;
@@ -63,10 +63,10 @@
   /* Customizable theme accents (admin-overridable via custom.css) */
   --wl-header-bg: #25303b;
   --wl-header-text: #d5d0c7;
-  --wl-header-text-hover: #4eeac9;
-  --wl-navi-color: #6cf8d8;
+  --wl-header-text-hover: #a4daf4;
+  --wl-navi-color: #c7ebeb;
   --wl-navi-text-color: #fffdfa;
-  --wl-focus-color: #4eeac9;
+  --wl-focus-color: #a4daf4;
   --wl-hover-color: #ddd9d1;
 }
 
@@ -75,8 +75,8 @@
   --bs-body-color: #fffdfa !important;
   --bs-border-color: #484d50 !important;
 
-  --bs-link-color: #6cf8d8;
-  --bs-link-color-rgb: 108, 248, 216;
+  --bs-link-color: #c7ebeb;
+  --bs-link-color-rgb: 199, 235, 235;
   --bs-link-hover-color: #ddd9d1;
   --bs-link-hover-color-rgb: 221, 217, 209;
 
@@ -84,8 +84,8 @@
   --bs-dark-rgb: 37, 48, 59;
 
   --bs-primary-text-emphasis: #fffdfa;
-  --bs-primary-bg-subtle: #124437;
-  --bs-primary-border-subtle: #1d6f5a;
+  --bs-primary-bg-subtle: #164154;
+  --bs-primary-border-subtle: #24698a;
 
   --bs-success-text-emphasis: #99d89a;
   --bs-success-bg-subtle: #2d4219;
@@ -122,7 +122,7 @@
   }
 
   .btn-outline-primary {
-    --bs-btn-color: #6cf8d8;
+    --bs-btn-color: #c7ebeb;
     --bs-btn-bg: #1a1d1e;
     --bs-btn-hover-bg: #1a1d1e;
     --bs-btn-border-color: #484d50;
@@ -132,10 +132,10 @@
 
   .btn-primary {
     --bs-btn-color: var(--wl-color-text-strong);
-    --bs-btn-bg: var(--wl-color-primary);
-    --bs-btn-border-color: var(--wl-color-primary);
+    --bs-btn-bg: #0f3e54;
+    --bs-btn-border-color: #0f3e54;
     --bs-btn-disabled-color: var(--wl-color-text-strong);
-    --bs-btn-disabled-bg: var(--wl-color-primary-strong);
+    --bs-btn-disabled-bg: #0f3e54a6;
   }
 
   .btn-info {
@@ -282,7 +282,7 @@ fieldset[disabled] .form-control {
 .dropdown-menu > .active > a:hover,
 .dropdown-menu > .active > a:focus {
   color: #fffdfa;
-  background-color: #124437;
+  background-color: #164154;
 }
 .dropdown-menu > .disabled > a,
 .dropdown-menu > .disabled > a:hover,
@@ -679,7 +679,7 @@ a.red:hover path {
 
 .state-icon.green path,
 .green path {
-  fill: #6cf8d8;
+  fill: #c7ebeb;
 }
 
 footer li,

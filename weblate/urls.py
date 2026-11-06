@@ -10,7 +10,7 @@ import django.views.static
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
-from django.urls import include, path, re_path
+from django.urls import include, path
 from django.utils.module_loading import import_string
 from django.views.decorators.cache import cache_control, cache_page
 from django.views.decorators.vary import vary_on_cookie
@@ -1017,28 +1017,6 @@ real_patterns = [
     ),
     # Health check
     path("healthz/", weblate.trans.views.basic.healthz, name="healthz"),
-    # Aliases for static files
-    re_path(
-        r"^(android-chrome|favicon)-(?P<size>192|512)x(?P=size)\.png$",
-        RedirectView.as_view(
-            url=f"{settings.STATIC_URL}weblate-%(size)s.png",
-            permanent=True,
-        ),
-    ),
-    path(
-        "apple-touch-icon.png",
-        RedirectView.as_view(
-            url=f"{settings.STATIC_URL}weblate-180.png",
-            permanent=True,
-        ),
-    ),
-    path(
-        "favicon.ico",
-        RedirectView.as_view(
-            url=f"{settings.STATIC_URL}favicon.ico",
-            permanent=True,
-        ),
-    ),
     path(
         "robots.txt",
         cache_control(max_age=86400)(

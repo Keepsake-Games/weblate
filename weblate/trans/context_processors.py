@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext
@@ -175,6 +176,13 @@ def weblate_context(request: AuthenticatedHttpRequest):
         "has_antispam": False,  # Akismet integration removed
         "has_sentry": bool(settings.SENTRY_DSN),
         "watched_projects": watched_projects,
+        # A project slug, as opposed to True for "the only project there is",
+        # replaces the projects menu with a link to that project.
+        "single_project_url": reverse(
+            "show", kwargs={"path": (settings.SINGLE_PROJECT,)}
+        )
+        if isinstance(settings.SINGLE_PROJECT, str) and settings.SINGLE_PROJECT
+        else "",
         "allow_index": False,
         "configuration_errors": ConfigurationError.objects.filter(
             ignored=False

@@ -36,6 +36,7 @@
 
     {% for domain in preconnect_list %}<link rel="preconnect" href="https://{{ domain }}">{% endfor %}
 
+    <script src="{% static 'js/theme-init.js' %}{{ cache_param }}"></script>
     {% include "snippets/meta-css.html" %}
 
     <script src="{% url 'js-catalog' %}" defer></script>
@@ -86,17 +87,13 @@
 
     {% block extra_script %}{% endblock %}
 
-    <link rel="image_src" type="image/png" href="{% static 'weblate-128.png' %}" />
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'logo-32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'logo-16.png' %}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'weblate-180.png' %}" />
-    <link rel="mask-icon" href="{% static 'weblate-black.svg' %}" color="#144d3f">
-    <meta name="msapplication-TileColor" content="#144d3f">
+    <link rel="icon" href="data:,">
+    <meta name="msapplication-TileColor" content="#194960">
     <meta name="msapplication-config" content="/browserconfig.xml">
     <link rel="manifest" href="/site.webmanifest">
     {{ extra_html_head|safe }}
     {% if matomo_url %}<link rel="preconnect" href="{{ matomo_url }}">{% endif %}
-    <meta name="theme-color" content="#144d3f">
+    <meta name="theme-color" content="#194960">
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta property="og:site_name" content="{{ site_title }}" />
@@ -142,36 +139,42 @@
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'home' %}">{% translate "Dashboard" %}</a>
               </li>
-              <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle"
-                   href="#"
-                   role="button"
-                   data-bs-toggle="dropdown"
-                   id="projects-menu">{% translate "Projects" %}</a>
-                <ul class="dropdown-menu shadow">
-                  {% if watched_projects %}
-                    {% for project in watched_projects %}
+              {% if single_project_url %}
+                <li class="nav-item">
+                  <a class="nav-link" href="{{ single_project_url }}" id="projects-menu">{% translate "Project" %}</a>
+                </li>
+              {% else %}
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle"
+                     href="#"
+                     role="button"
+                     data-bs-toggle="dropdown"
+                     id="projects-menu">{% translate "Projects" %}</a>
+                  <ul class="dropdown-menu shadow">
+                    {% if watched_projects %}
+                      {% for project in watched_projects %}
+                        <li>
+                          <a class="dropdown-item" href="{{ project.get_absolute_url }}">{{ project }}</a>
+                        </li>
+                      {% endfor %}
                       <li>
-                        <a class="dropdown-item" href="{{ project.get_absolute_url }}">{{ project }}</a>
+                        <hr class="dropdown-divider">
                       </li>
-                    {% endfor %}
+                    {% endif %}
+                    {% if user.is_authenticated %}
+                      <li>
+                        <a class="dropdown-item" href="{% url 'profile' %}#notifications">{% translate "Manage watched projects" %}</a>
+                      </li>
+                      <li>
+                        <hr class="dropdown-divider">
+                      </li>
+                    {% endif %}
                     <li>
-                      <hr class="dropdown-divider">
+                      <a class="dropdown-item" href="{% url 'projects' %}">{% translate "Browse all projects" %}</a>
                     </li>
-                  {% endif %}
-                  {% if user.is_authenticated %}
-                    <li>
-                      <a class="dropdown-item" href="{% url 'profile' %}#notifications">{% translate "Manage watched projects" %}</a>
-                    </li>
-                    <li>
-                      <hr class="dropdown-divider">
-                    </li>
-                  {% endif %}
-                  <li>
-                    <a class="dropdown-item" href="{% url 'projects' %}">{% translate "Browse all projects" %}</a>
-                  </li>
-                </ul>
-              </li>
+                  </ul>
+                </li>
+              {% endif %}
               {% with languages=user.profile.all_languages.order_translated %}
                 <li class="nav-item dropdown">
                   <a href="#"
@@ -285,12 +288,6 @@
 
               {# Login and register for not authenticated #}
               {% if not user.is_authenticated %}
-                {% if registration_open %}
-                  <li class="nav-item">
-                    {# Translators: Register on the site #}
-                    <a class="nav-link button" id="register-button" href="{% url 'register' %}">{% translate "Register" %}</a>
-                  </li>
-                {% endif %}
                 <li class="nav-item">
                   <a class="nav-link button"
                      id="login-button"
