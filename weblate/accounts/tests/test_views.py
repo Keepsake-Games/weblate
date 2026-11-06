@@ -12,6 +12,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.core import mail
+from django.test import TestCase
 from django.test.utils import modify_settings, override_settings
 from django.urls import reverse
 from jsonschema import validate
@@ -454,9 +455,11 @@ class ViewTest(RepoTestCase):
             "weblate.accounts.auth.WeblateUserBackend",
         )
     )
-    def test_login_redirect(self) -> None:
+    def test_login_single_backend(self) -> None:
+        """A single provider is offered on the sign-in page, not forwarded to."""
         response = self.client.get(reverse("login"))
-        self.assertContains(response, "Redirecting you to the authentication provider.")
+        self.assertTemplateUsed(response, "accounts/login.html")
+        self.assertContains(response, reverse("social:begin", args=("github",)))
 
     def test_login_email(self) -> None:
         user = self.get_user()
@@ -1362,3 +1365,20 @@ class AdminUserRevertTest(FixtureTestCase):
             response,
             "Cleaning up contributions by sitewide-target site-wide was scheduled.",
         )
+
+
+class SingleProjectNavigationTest(TestCase):
+    @override_settings(SINGLE_PROJECT="jump-space")
+    def test_single_project_link(self) -> None:
+        """With one project configured, the navigation links straight to it."""
+        response = self.client.get(reverse("about"))
+        self.assertContains(
+            response,
+            f'href="{reverse("show", kwargs={"path": ("jump-space",)})}" '
+            'id="projects-menu"',
+        )
+        self.assertNotContains(response, "Browse all projects")
+
+    def test_projects_menu(self) -> None:
+        response = self.client.get(reverse("about"))
+        self.assertContains(response, "Browse all projects")

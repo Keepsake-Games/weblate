@@ -11,12 +11,14 @@ from typing import TYPE_CHECKING, NoReturn
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.utils.translation import gettext
 from django_otp import DEVICE_ID_SESSION_KEY
+from requests.exceptions import HTTPError
 from social_core.exceptions import AuthAlreadyAssociated, AuthMissingParameter
 from social_core.pipeline.partial import partial
 from social_core.utils import PARTIAL_TOKEN_SESSION_NAME
@@ -328,6 +330,41 @@ def verify_open(
         and backend.name not in settings.REGISTRATION_ALLOW_BACKENDS
     ):
         raise AuthMissingParameter(backend, "disabled")
+
+
+def require_discord_membership(backend, response, **kwargs) -> None:
+    """
+    Admit only members of the configured Discord server, holding a required role.
+
+    Runs on every sign-in rather than only at registration, so removing someone
+    from the server or taking the role away locks the account out from the next
+    sign-in. Sessions that are already open are not affected.
+
+    Discord answers 404 for a server the user is not in. Any other failure, such
+    as a rate limit or a token issued without the guilds.members.read scope,
+    propagates and fails the sign-in: an unverifiable member is not admitted.
+    """
+    guild = settings.DISCORD_REQUIRED_GUILD
+    if backend.name != DISCORD_BACKEND or not guild:
+        return
+    # It becomes part of the request path, and Discord IDs are always numeric.
+    if not str(guild).isdigit():
+        msg = "DISCORD_REQUIRED_GUILD has to be a numeric Discord server ID"
+        raise ImproperlyConfigured(msg)
+
+    try:
+        member = backend.get_json(
+            f"https://discord.com/api/users/@me/guilds/{guild}/member",
+            headers={"Authorization": f"Bearer {response['access_token']}"},
+        )
+    except HTTPError as error:
+        if error.response is not None and error.response.status_code == 404:
+            raise AuthMissingParameter(backend, "discord_membership") from error
+        raise
+
+    required_roles = set(settings.DISCORD_REQUIRED_ROLES)
+    if required_roles and required_roles.isdisjoint(member.get("roles") or ()):
+        raise AuthMissingParameter(backend, "discord_membership")
 
 
 def store_params(strategy, user: User, **kwargs):

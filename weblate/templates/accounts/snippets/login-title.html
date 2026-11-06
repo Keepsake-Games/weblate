@@ -7,7 +7,5 @@
   {{ site_title }}
   {% if support_status.is_dedicated %}
     <span class="badge text-bg-primary">{% translate "Dedicated" context "Badge for site title for dedicated instances" %}</span>
-  {% else %}
-    <span class="badge text-bg-secondary">{% translate "Self-hosted" context "Badge for site title for self-hosted instances" %}</span>
   {% endif %}
 {% endif %}

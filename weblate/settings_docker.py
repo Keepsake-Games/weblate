@@ -398,6 +398,19 @@ if SOCIAL_AUTH_DISCORD_KEY:
     SOCIAL_AUTH_DISCORD_EXTRA_DATA = [("avatar", "avatar")]
     AUTHENTICATION_BACKENDS += ("social_core.backends.discord.DiscordOAuth2",)
 
+# Only members of this Discord server, holding one of these roles when any are
+# listed, may sign in. Checking membership needs guilds.members.read on top of
+# the default identify scope.
+DISCORD_REQUIRED_GUILD = get_env_str("WEBLATE_DISCORD_REQUIRED_GUILD", "")
+DISCORD_REQUIRED_ROLES = get_env_list("WEBLATE_DISCORD_REQUIRED_ROLES", [])
+DISCORD_REQUIRED_ROLE_NAME = get_env_str("WEBLATE_DISCORD_REQUIRED_ROLE_NAME", "")
+
+# Slug of the only project: the dashboard redirects to it and the navigation
+# links straight to it instead of offering a projects menu
+SINGLE_PROJECT = get_env_str("WEBLATE_SINGLE_PROJECT", "")
+if DISCORD_REQUIRED_GUILD:
+    SOCIAL_AUTH_DISCORD_SCOPE = ["guilds.members.read"]
+
 
 SOCIAL_AUTH_MUSICBRAINZ_KEY = get_env_str("WEBLATE_SOCIAL_AUTH_MUSICBRAINZ_KEY")
 if SOCIAL_AUTH_MUSICBRAINZ_KEY:
@@ -636,6 +649,7 @@ SOCIAL_AUTH_PIPELINE = [
     "social_core.pipeline.social_auth.social_details",
     "social_core.pipeline.social_auth.social_uid",
     "social_core.pipeline.social_auth.auth_allowed",
+    "weblate.accounts.pipeline.require_discord_membership",
     "social_core.pipeline.social_auth.social_user",
     "weblate.accounts.pipeline.store_params",
     "weblate.accounts.pipeline.verify_open",

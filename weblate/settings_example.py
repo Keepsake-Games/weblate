@@ -290,12 +290,21 @@ SOCIAL_AUTH_DISCORD_SECRET = ""
 # below makes up an undeliverable one instead.
 # Keep the avatar hash around so avatars can be served from the Discord CDN.
 SOCIAL_AUTH_DISCORD_EXTRA_DATA = [("avatar", "avatar")]
+# Admit only members of one Discord server, by its ID, who hold at least one of
+# the listed role IDs (any member when the list is empty). Membership is read with
+# the guilds.members.read scope, which has to be requested as well.
+# DISCORD_REQUIRED_GUILD = "123456789012345678"
+# DISCORD_REQUIRED_ROLES = ["234567890123456789"]
+# The role's name as shown in Discord, used in the message for those turned away.
+# DISCORD_REQUIRED_ROLE_NAME = "Translator"
+# SOCIAL_AUTH_DISCORD_SCOPE = ["guilds.members.read"]
 
 # Social auth settings
 SOCIAL_AUTH_PIPELINE: tuple[str, ...] = (
     "social_core.pipeline.social_auth.social_details",
     "social_core.pipeline.social_auth.social_uid",
     "social_core.pipeline.social_auth.auth_allowed",
+    "weblate.accounts.pipeline.require_discord_membership",
     "social_core.pipeline.social_auth.social_user",
     "weblate.accounts.pipeline.store_params",
     "weblate.accounts.pipeline.verify_open",

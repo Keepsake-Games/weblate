@@ -227,6 +227,7 @@ HANDLED_AUTH_PARAMETERS = frozenset(
         "RelayState.idp",
         "disabled",
         "invitation",
+        "discord_membership",
     }
 )
 HANDLED_AUTH_FAILED_MARKERS = (
@@ -1159,10 +1160,9 @@ class WeblateLoginView(BaseLoginView):
         if request.user.is_authenticated:
             return redirect_profile()
 
-        # Redirect if there is only one backend
-        auth_backends = get_auth_keys()
-        if len(auth_backends) == 1 and "email" not in auth_backends:
-            return redirect_single(request, auth_backends.pop())
+        # No forwarding to a single backend: the sign-in page carries the welcome
+        # text and any sign-in error, and the provider can complete without
+        # interaction, which would skip both.
 
         if request.method == "POST" and not self.show_login_form:
             return redirect("login")
@@ -1268,6 +1268,22 @@ def register(request: AuthenticatedHttpRequest):
         form = RegistrationForm(
             request=request, initial=initial, hide_captcha=hide_captcha
         )
+
+    # Without e-mail registration, signing in through a provider for the first
+    # time is registering, so when every sign-in option may also register there
+    # is nothing for this page to add. Otherwise keep the upstream behavior: with
+    # no backend, registration is closed and the page says so; with a subset
+    # allowed by REGISTRATION_ALLOW_BACKENDS, lead to that one.
+    if (
+        backends
+        and "email" not in backends
+        and backends == get_auth_keys()
+        and not invitation
+    ):
+        login_url = reverse("login")
+        if next_url := request.GET.get("next"):
+            login_url = f"{login_url}?{urlencode({'next': next_url})}"
+        return redirect(login_url)
 
     # Redirect if there is only one backend
     if len(backends) == 1 and "email" not in backends and not invitation:
@@ -1784,6 +1800,18 @@ def handle_missing_parameter(
         return auth_redirect_state(request)
     if error.parameter == "disabled":
         return auth_fail(request, gettext("New registrations are turned off."))
+    if error.parameter == "discord_membership":
+        if role := settings.DISCORD_REQUIRED_ROLE_NAME:
+            message = gettext(
+                "Access to the localization portal requires you to opt in to the "
+                "%(role)s role on Discord."
+            ) % {"role": role}
+        else:
+            message = gettext(
+                "Access to the localization portal requires a role on our Discord "
+                "server."
+            )
+        return auth_fail(request, message)
     return None
 
 

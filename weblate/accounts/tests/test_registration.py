@@ -1575,6 +1575,10 @@ class RegistrationTest(BaseRegistrationTest):
         self.assertContains(response, url)
 
 
+DISCORD_TEST_GUILD = "555555555555555555"
+DISCORD_TEST_ROLE = "666666666666666666"
+
+
 @override_settings(REGISTRATION_OPEN=True, REGISTRATION_CAPTCHA=False)
 class DiscordRegistrationTest(TestCase):
     """Discord authenticates without handing out an e-mail address."""
@@ -1673,6 +1677,123 @@ class DiscordRegistrationTest(TestCase):
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["username"], "dogstar")
         self.assertEqual(form.cleaned_data["full_name"], "dogstar")
+
+    def add_member_response(self, status: int = 200, roles: list[str] | None = None):
+        """Answer the guild membership lookup made by the invite-only gate."""
+        responses.add(
+            responses.GET,
+            f"https://discord.com/api/users/@me/guilds/{DISCORD_TEST_GUILD}/member",
+            status=status,
+            json={"roles": roles or []} if status == 200 else {"code": 10004},
+        )
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    @override_settings(
+        DISCORD_REQUIRED_GUILD=DISCORD_TEST_GUILD,
+        DISCORD_REQUIRED_ROLES=[DISCORD_TEST_ROLE],
+        SOCIAL_AUTH_DISCORD_SCOPE=["guilds.members.read"],
+    )
+    def test_invite_only_member_with_role(self) -> None:
+        self.add_member_response(roles=["111", DISCORD_TEST_ROLE])
+        self.perform_discord_login()
+        self.assertTrue(User.objects.filter(username="dogstar").exists())
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    @override_settings(
+        DISCORD_REQUIRED_GUILD=DISCORD_TEST_GUILD,
+        DISCORD_REQUIRED_ROLES=[DISCORD_TEST_ROLE],
+        DISCORD_REQUIRED_ROLE_NAME="Translator",
+        SOCIAL_AUTH_DISCORD_SCOPE=["guilds.members.read"],
+    )
+    def test_invite_only_not_in_server(self) -> None:
+        self.add_member_response(status=404)
+        response = self.perform_discord_login()
+        self.assertContains(response, "opt in to the Translator role on Discord")
+        # The sign-in page, not the single backend redirect, which would send the
+        # user straight back to Discord before the message could be read
+        self.assertTemplateNotUsed(response, "accounts/redirect.html")
+        self.assertFalse(User.objects.filter(username="dogstar").exists())
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    @override_settings(
+        DISCORD_REQUIRED_GUILD=DISCORD_TEST_GUILD,
+        DISCORD_REQUIRED_ROLES=[DISCORD_TEST_ROLE],
+        SOCIAL_AUTH_DISCORD_SCOPE=["guilds.members.read"],
+    )
+    def test_invite_only_member_without_role(self) -> None:
+        self.add_member_response(roles=["111"])
+        response = self.perform_discord_login()
+        # Without a configured role name, the message stays generic
+        self.assertContains(response, "requires a role on our Discord server")
+        self.assertTemplateNotUsed(response, "accounts/redirect.html")
+        self.assertFalse(User.objects.filter(username="dogstar").exists())
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    @override_settings(
+        DISCORD_REQUIRED_GUILD=DISCORD_TEST_GUILD,
+        DISCORD_REQUIRED_ROLES=[DISCORD_TEST_ROLE],
+        SOCIAL_AUTH_DISCORD_SCOPE=["guilds.members.read"],
+    )
+    def test_invite_only_role_removed(self) -> None:
+        """An existing account is turned away once the role is gone."""
+        self.add_member_response(roles=[DISCORD_TEST_ROLE])
+        self.perform_discord_login()
+        self.client.logout()
+
+        responses.reset()
+        self.add_member_response(roles=[])
+        response = self.perform_discord_login()
+        self.assertContains(response, "requires a role on our Discord server")
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    @override_settings(
+        DISCORD_REQUIRED_GUILD=DISCORD_TEST_GUILD,
+        DISCORD_REQUIRED_ROLES=[],
+        SOCIAL_AUTH_DISCORD_SCOPE=["guilds.members.read"],
+    )
+    def test_invite_only_any_member(self) -> None:
+        """Without required roles, being in the server is enough."""
+        self.add_member_response(roles=[])
+        self.perform_discord_login()
+        self.assertTrue(User.objects.filter(username="dogstar").exists())
+
+    @responses.activate
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    @override_settings(
+        DISCORD_REQUIRED_GUILD=DISCORD_TEST_GUILD,
+        SOCIAL_AUTH_DISCORD_SCOPE=["guilds.members.read"],
+    )
+    def test_invite_only_scope_requested(self) -> None:
+        response = self.client.post(reverse("social:begin", args=("discord",)))
+        scopes = parse_qs(urlparse(response["Location"]).query)["scope"][0]
+        self.assertIn("guilds.members.read", scopes)
+        self.assertIn("identify", scopes)
+        self.assertNotIn("email", scopes)
+
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    def test_login_page_not_skipped(self) -> None:
+        """The sign-in page with its welcome text is shown, not forwarded past."""
+        response = self.client.get(reverse("login"))
+        self.assertTemplateNotUsed(response, "accounts/redirect.html")
+        self.assertContains(response, "community localization effort")
+        self.assertContains(response, reverse("social:begin", args=("discord",)))
+        self.assertNotContains(response, "Register new account")
+
+    @social_core_override_settings(AUTHENTICATION_BACKENDS=DISCORD_BACKENDS)
+    def test_register_forwards_to_login(self) -> None:
+        """Signing in through Discord is registering, so there is no separate page."""
+        response = self.client.get(reverse("register"), {"next": "/projects/"})
+        self.assertRedirects(
+            response,
+            f"{reverse('login')}?next=%2Fprojects%2F",
+            fetch_redirect_response=False,
+        )
 
     def test_identity_editable_without_discord(self) -> None:
         user = User.objects.create_user("plain", "plain@example.org", "x")

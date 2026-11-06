@@ -430,6 +430,27 @@ once to create the account, then add it to a team carrying the needed role, see
 :ref:`access-control`. Automatic team assignment is not usable here, because it
 matches on the e-mail address and all generated addresses share a single domain.
 
+Sign-in can be limited to members of one Discord server, and further to those
+holding one of a set of roles, for example the role that unlocks an invite-only
+channel. Enable Discord's *Developer Mode* to copy the IDs, then configure:
+
+.. code-block:: python
+
+    DISCORD_REQUIRED_GUILD = "123456789012345678"
+    DISCORD_REQUIRED_ROLES = ["234567890123456789"]
+    DISCORD_REQUIRED_ROLE_NAME = "Translator"
+    SOCIAL_AUTH_DISCORD_SCOPE = ["guilds.members.read"]
+
+``DISCORD_REQUIRED_ROLE_NAME`` names the role in the message shown to anyone
+turned away. Discord does not disclose role names to the signing-in user, so it
+has to be configured rather than looked up. The Docker image reads
+``WEBLATE_DISCORD_REQUIRED_GUILD``, a comma-separated
+``WEBLATE_DISCORD_REQUIRED_ROLES`` and ``WEBLATE_DISCORD_REQUIRED_ROLE_NAME``, and
+requests the scope itself. With an empty
+role list, membership in the server is enough. The check runs on every sign-in,
+so removing the role turns the account away from its next sign-in; sessions that
+are already open stay valid until they expire. Superusers are checked as well.
+
 .. include:: /snippets/oauth-site.rst
 
 .. seealso::

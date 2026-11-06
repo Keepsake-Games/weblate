@@ -1207,9 +1207,9 @@ class SeleniumTests(BaseLiveServerTestCase, RegistrationTestMixin, TempDirMixin)
         self.driver.find_element(By.ID, "dashboard-return")
 
     def register_user(self) -> str:
-        # registration page
+        # registration page, which is no longer linked from the navigation
         with self.wait_for_page_load():
-            self.click(htmlid="register-button")
+            self.driver.get(f"{self.live_server_url}{reverse('register')}")
 
         # Fill in registration form
         self.driver.find_element(By.ID, "id_email").send_keys("weblate@example.org")

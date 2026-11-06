@@ -150,6 +150,18 @@ class WeblateAccountsConf(AppConf):
         defaults.DEFAULT_INITIAL_WATCHED_PROJECTS
     )
 
+    # Discord server (guild) ID whose members alone may sign in through Discord,
+    # and optionally role IDs of which they need at least one. Empty admits any
+    # Discord account. Needs the guilds.members.read scope.
+    DISCORD_REQUIRED_GUILD = defaults.DEFAULT_DISCORD_REQUIRED_GUILD
+    DISCORD_REQUIRED_ROLES: ClassVar[list[str]] = list(
+        defaults.DEFAULT_DISCORD_REQUIRED_ROLES
+    )
+    # How the required role is called in Discord, for the message shown to someone
+    # turned away. Discord does not reveal role names to the signing-in user's
+    # token, so it cannot be looked up from the ID.
+    DISCORD_REQUIRED_ROLE_NAME = defaults.DEFAULT_DISCORD_REQUIRED_ROLE_NAME
+
     CONTACT_FORM = defaults.DEFAULT_CONTACT_FORM
 
     PRIVATE_COMMIT_EMAIL_TEMPLATE = defaults.DEFAULT_PRIVATE_COMMIT_EMAIL_TEMPLATE
