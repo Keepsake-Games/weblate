@@ -3,5 +3,7 @@ USER root
 ADD src.tar /src/
 RUN /app/venv/bin/python -m ensurepip \
  && /app/venv/bin/python -m pip install --no-deps /src \
+ && cp /src/docker/nginx-errors/weblate-starting.html \
+       /src/docker/nginx-errors/weblate-timeout.html /etc/nginx/errors/ \
  && rm -rf /src
 USER 1000
