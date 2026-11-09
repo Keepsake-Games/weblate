@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% load crispy_forms_tags i18n %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item">
+    <a href="{% url 'onboarding' %}">{{ title }}</a>
+  </li>
+{% endblock breadcrumbs %}
+
+{% block content %}
+  <form method="post" action="{% url 'onboarding' %}">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title">{% translate "Welcome! Let’s set up your languages" %}</h4>
+      </div>
+      <div class="card-body">
+        <p>
+          {% blocktranslate trimmed %}
+            Your translated languages are the ones you write translations in. They decide which translations you see first on the dashboard.
+          {% endblocktranslate %}
+        </p>
+        <p>
+          {% blocktranslate trimmed %}
+            Secondary languages are ones you can read. While translating, strings in those languages are shown next to the source string, which helps when the source is ambiguous. You can leave this empty.
+          {% endblocktranslate %}
+        </p>
+        {% crispy form %}
+        <p class="help-block">
+          {% blocktranslate trimmed %}
+            You can change both later in your profile settings.
+          {% endblocktranslate %}
+        </p>
+      </div>
+      <div class="card-footer">
+        <input type="submit"
+               value="{% translate "Save and continue" %}"
+               class="btn btn-primary" />
+      </div>
+    </div>
+  </form>
+{% endblock content %}

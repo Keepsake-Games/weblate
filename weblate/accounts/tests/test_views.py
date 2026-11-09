@@ -1382,3 +1382,51 @@ class SingleProjectNavigationTest(TestCase):
     def test_projects_menu(self) -> None:
         response = self.client.get(reverse("about"))
         self.assertContains(response, "Browse all projects")
+
+
+class OnboardingTest(FixtureTestCase):
+    def test_banner_until_onboarded(self) -> None:
+        response = self.client.get(reverse("about"))
+        self.assertContains(
+            response, f'href="{reverse("onboarding")}?next=%2Fabout%2F"'
+        )
+
+        response = self.client.get(reverse("onboarding"))
+        self.assertContains(response, 'name="secondary_languages"')
+        self.assertNotContains(response, "Finish setting up")
+
+        self.user.profile.onboarded = True
+        self.user.profile.save(update_fields=["onboarded"])
+        response = self.client.get(reverse("about"))
+        self.assertNotContains(response, "Finish setting up")
+
+    def test_complete(self) -> None:
+        primary, secondary = Language.objects.have_translation()[:2]
+        response = self.client.post(
+            reverse("onboarding"),
+            {
+                "languages": primary.id,
+                "secondary_languages": secondary.id,
+                "next": reverse("about"),
+            },
+        )
+        self.assertRedirects(response, reverse("about"))
+        profile = Profile.objects.get(user=self.user)
+        self.assertTrue(profile.onboarded)
+        self.assertEqual(list(profile.languages.all()), [primary])
+        self.assertEqual(list(profile.secondary_languages.all()), [secondary])
+
+    def test_requires_translated_language(self) -> None:
+        response = self.client.post(reverse("onboarding"), {"languages": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Profile.objects.get(user=self.user).onboarded)
+
+    def test_rejects_external_next(self) -> None:
+        response = self.client.post(
+            reverse("onboarding"),
+            {
+                "languages": Language.objects.have_translation()[0].id,
+                "next": "https://example.com/",
+            },
+        )
+        self.assertRedirects(response, reverse("home"), fetch_redirect_response=False)

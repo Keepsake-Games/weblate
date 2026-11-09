@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% load compress i18n icons static translations %}
+
+{% block extra_script %}
+  {% compress js %}
+    <script defer data-cfasync="false" src="{% static 'editor/peon.js' %}{{ cache_param }}"></script>
+  {% endcompress %}
+{% endblock extra_script %}
+
+{% block extra_styles %}
+  {% compress css %}
+    <link rel="stylesheet" href="{% static 'styles/peon.css' %}{{ cache_param }}" />
+  {% endcompress %}
+{% endblock extra_styles %}
+
+{% block breadcrumbs %}
+  {% path_object_breadcrumbs path_object %}
+  <li class="breadcrumb-item">
+    <a href="{% url 'peon' path=object.get_url_path %}">{% translate "Peon" %}</a>
+  </li>
+{% endblock breadcrumbs %}
+
+{% block content %}
+  {% url 'translate' path=object.get_url_path as translate_url %}
+
+  <div id="peon"
+       class="peon"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="peon-title"
+       data-game="{{ mode }}"
+       data-load-url="{% url 'load_peon' path=object.get_url_path %}?mode={{ mode }}&amp;{{ search_url }}"
+       {% if mode == "translate" %}
+         data-review-url="{% url 'load_peon' path=object.get_url_path %}?{{ review_query }}"
+         data-review-every="{{ review_round.every }}"
+         data-review-size="{{ review_round.size }}"
+       {% endif %}
+       data-exit-url="{{ translate_url }}?{{ search_url }}"
+       data-offset="{{ offset }}"
+       data-total="{{ filter_count }}"
+       data-page-size="20"
+       {% if last_section %}data-last-section{% endif %}>
+    {% csrf_token %}
+
+    <header class="peon-hud">
+      <h1 id="peon-title" class="peon-title">
+        {% icon "person-digging.svg" %} {% translate "Peon" %}
+        <span class="peon-game">
+          {% if mode == "review" %}
+            {% translate "Reviewing" %}
+          {% else %}
+            {% translate "Translating" %}
+          {% endif %}
+        </span>
+      </h1>
+
+      <div class="peon-progress-wrap">
+        <div class="peon-progress"
+             role="progressbar"
+             aria-label="{% translate "Strings done" %}"
+             aria-valuemin="0"
+             aria-valuemax="{{ filter_count }}"
+             aria-valuenow="0">
+          <div class="peon-progress-bar"></div>
+        </div>
+        <span class="peon-progress-text"><span class="peon-done-count">0</span> / {{ filter_count }}</span>
+      </div>
+
+      <div class="peon-combo" aria-live="polite" aria-atomic="true">
+        <span class="peon-combo-count">0</span>
+        <span class="peon-combo-label">{% translate "combo" %}</span>
+      </div>
+
+      <div class="peon-hud-buttons">
+        <button type="button"
+                class="peon-mute"
+                aria-pressed="false"
+                title="{% translate "Sound on or off" %} (Alt+M)">
+          <span class="peon-mute-on">{% translate "Sound on" %}</span>
+          <span class="peon-mute-off">{% translate "Sound off" %}</span>
+        </button>
+        <a class="peon-exit" href="{{ translate_url }}?{{ search_url }}">
+          <kbd>Esc</kbd> {% translate "Full editor" %}
+        </a>
+      </div>
+    </header>
+
+    <main class="peon-stage">
+      <div class="peon-deck">{% include "peon-tasks.html" %}</div>
+
+      <div class="peon-loading" hidden>{% translate "Fetching more work…" %}</div>
+
+      <section class="peon-finished" hidden tabindex="-1">
+        <h2>{% translate "Shift complete!" %}</h2>
+        <p class="peon-finished-stats"></p>
+        <p>
+          <a class="btn btn-primary" href="{{ translate_url }}?{{ search_url }}">{% translate "Back to the full editor" %}</a>
+        </p>
+      </section>
+
+      <div class="peon-fx" aria-hidden="true"></div>
+      <div class="peon-status visually-hidden" role="status" aria-live="assertive"></div>
+    </main>
+
+    <footer class="peon-keys" aria-label="{% translate "Keyboard shortcuts" %}">
+      <span class="peon-keys-translate">
+        <span><kbd>Enter</kbd> {% translate "Save" %}</span>
+        <span><kbd>Shift</kbd>+<kbd>Enter</kbd> {% translate "New line" %}</span>
+        <span><kbd>Ctrl</kbd>+<kbd>→</kbd> {% translate "Skip" %}</span>
+        <span><kbd>Ctrl</kbd>+<kbd>1</kbd> {% translate "Copy source" %}</span>
+      </span>
+      <span class="peon-keys-review">
+        <span><kbd>→</kbd> {% translate "Accept" %}</span>
+        <span><kbd>←</kbd> {% translate "Reject" %}</span>
+        <span><kbd>↓</kbd> {% translate "Skip" %}</span>
+      </span>
+      <span><kbd>Esc</kbd> {% translate "Full editor" %}</span>
+    </footer>
+  </div>
+{% endblock content %}

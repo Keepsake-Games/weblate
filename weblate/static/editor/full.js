@@ -955,4 +955,12 @@
   document.addEventListener("DOMContentLoaded", () => {
     new FullEditor();
   });
+
+  document.addEventListener("keydown", (event) => {
+    const peon = document.getElementById("peon-enter");
+    if (peon !== null && event.altKey && event.code === "KeyP") {
+      event.preventDefault();
+      window.location.href = peon.href;
+    }
+  });
 })();

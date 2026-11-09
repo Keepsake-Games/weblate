@@ -206,6 +206,35 @@ class LanguagesForm(ProfileBaseForm):
         activate(self.cleaned_data["language"])
 
 
+class OnboardingForm(ProfileBaseForm):
+    class Meta:
+        model = Profile
+        fields = ("languages", "secondary_languages")
+        # ruff: ignore[mutable-class-default]
+        widgets = {
+            "languages": SortedSelectMultiple,
+            "secondary_languages": SortedSelectMultiple,
+        }
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        choices = list(Language.objects.have_translation().as_choices(use_code=False))
+        self.fields["languages"].choices = choices
+        self.fields["languages"].required = True
+        self.fields["secondary_languages"].choices = choices
+        self.helper = FormHelper(self)
+        self.helper.disable_csrf = True
+        self.helper.form_tag = False
+
+    def save(self, commit=True) -> Profile:
+        profile = super().save(commit=False)
+        profile.onboarded = True
+        if commit:
+            profile.save()
+            self.save_m2m()
+        return profile
+
+
 class CommitForm(ProfileBaseForm):
     commit_email = forms.ChoiceField(
         label=gettext_lazy("Commit e-mail"),

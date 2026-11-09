@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% load compress humanize i18n icons static %}
+
+{% block extra_script %}
+  {% compress js %}
+    <script defer data-cfasync="false" src="{% static 'editor/peon.js' %}{{ cache_param }}"></script>
+  {% endcompress %}
+{% endblock extra_script %}
+
+{% block extra_styles %}
+  {% compress css %}
+    <link rel="stylesheet" href="{% static 'styles/peon.css' %}{{ cache_param }}" />
+  {% endcompress %}
+{% endblock extra_styles %}
+
+{% block breadcrumbs %}
+  <li class="breadcrumb-item">
+    <a href="{% url 'peon-start' %}">{% translate "Translate now" %}</a>
+  </li>
+{% endblock breadcrumbs %}
+
+{% block content %}
+  <form id="peon-start" class="peon-start" method="get" action="{% url 'peon-start' %}">
+    <header class="peon-start-header">
+      <span class="peon-start-icon">{% icon "person-digging.svg" %}</span>
+      <h1>{% translate "Report for duty!" %}</h1>
+      <p>{% translate "Grab a shovel, crewmate! Every string you write brings the launch closer. Two thumbs up from your fellow translators and it is in." %}</p>
+    </header>
+
+    {% if not targets %}
+      <div class="alert alert-info">
+        {% translate "None of your languages are being translated here yet." %}
+        <a href="{% url 'onboarding' %}?next={% url 'peon-start' %}">{% translate "Change your languages" %}</a>
+      </div>
+    {% else %}
+
+      {% if projects|length > 1 %}
+        <div class="peon-start-pick">
+          <label for="peon-start-project">{% translate "Project" %}</label>
+          <select id="peon-start-project" name="project" class="form-select">
+            {% for item in projects %}
+              <option value="{{ item.slug }}" {% if item == project %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endif %}
+
+      {% if targets|length > 1 %}
+        <fieldset class="peon-start-pick">
+          <legend>{% translate "Language" %}</legend>
+          {% for item in targets %}
+            <label class="peon-start-language">
+              <input type="radio"
+                     name="lang"
+                     value="{{ item.language.code }}"
+                     data-reviewable="{{ item.reviewable }}"
+                     {% if item == target %}checked{% endif %} />
+              <span class="peon-start-language-name">{{ item.language }}</span>
+              <span class="peon-start-language-counts">
+                {% blocktranslate count count=item.stats.todo trimmed %}
+                  {{ count }} to translate
+                {% plural %}
+                  {{ count }} to translate
+                {% endblocktranslate %}
+                ·
+                {% blocktranslate count count=item.reviewable trimmed %}
+                  {{ count }} to review
+                {% plural %}
+                  {{ count }} to review
+                {% endblocktranslate %}
+              </span>
+            </label>
+          {% endfor %}
+        </fieldset>
+      {% else %}
+        <input type="hidden" name="lang" value="{{ target.language.code }}" />
+      {% endif %}
+
+      <div class="peon-start-jobs">
+        <button type="submit" name="mode" value="translate" class="peon-job" autofocus>
+          <kbd>1</kbd>
+          <span class="peon-job-icon">{% icon "person-digging.svg" %}</span>
+          <span class="peon-job-title">{% translate "Build" %}</span>
+          <span class="peon-job-subtitle">{% translate "Translate strings" %}</span>
+          <span class="peon-job-text">{% translate "The gaps will not fill themselves! Write the words, and now and then judge the work of a crewmate." %}</span>
+          {% if targets|length == 1 %}
+            <span class="peon-job-count">
+              {% blocktranslate count count=target.stats.todo trimmed %}
+                {{ count }} string waiting
+              {% plural %}
+                {{ count }} strings waiting
+              {% endblocktranslate %}
+            </span>
+          {% endif %}
+        </button>
+
+        <button type="submit"
+                name="mode"
+                value="review"
+                class="peon-job"
+                id="peon-job-review"
+                {% if not target.reviewable %}disabled{% endif %}>
+          <kbd>2</kbd>
+          <span class="peon-job-icon">{% icon "thumb-up.svg" %}</span>
+          <span class="peon-job-title">{% translate "Inspect" %}</span>
+          <span class="peon-job-subtitle">{% translate "Review suggestions" %}</span>
+          <span class="peon-job-text">{% translate "Two thumbs up and a translation goes in. Your vote keeps the quality high!" %}</span>
+          <span class="peon-job-count peon-job-count-review" data-none="{% translate "Nothing to inspect right now" %}">
+            {% if target.reviewable %}
+              {% blocktranslate count count=target.reviewable trimmed %}
+                {{ count }} suggestion waiting
+              {% plural %}
+                {{ count }} suggestions waiting
+              {% endblocktranslate %}
+            {% else %}
+              {% translate "Nothing to inspect right now" %}
+            {% endif %}
+          </span>
+        </button>
+      </div>
+    {% endif %}
+  </form>
+{% endblock content %}

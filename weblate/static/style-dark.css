@@ -691,3 +691,97 @@ footer a {
 .token.placeable {
   outline-color: #394461;
 }
+
+/* Translation editor card: the page's call to action */
+.card.card-cta {
+  border: 2px solid #c7ebeb;
+  box-shadow:
+    0 0 0 1px rgba(199, 235, 235, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.card.card-cta > .card-header {
+  color: #10212b;
+  background: #c7ebeb;
+  border-bottom: 3px solid #2487b6;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+.card.card-cta > .card-header .card-title {
+  color: #10212b;
+  font-weight: 700;
+}
+.card.card-cta > .card-header .badge {
+  color: #c7ebeb !important;
+  background-color: #10212b !important;
+}
+.card.card-cta > .card-header a,
+.card.card-cta > .card-header a svg,
+.card.card-cta > .card-header a svg path {
+  color: #10212b !important;
+  fill: #10212b !important;
+  opacity: 0.75;
+}
+.card.card-cta > .card-body {
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+.card.card-cta .source-language-group {
+  margin-bottom: 1.75rem;
+}
+.card.card-cta .source-language-group .list-group-item {
+  border: 0;
+  background: transparent;
+}
+.card.card-cta > .card-footer {
+  background: #1c2328;
+  border-top: 1px solid #2b3a44;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.card.card-cta .editor-toolbar .btn-outline-primary,
+.translation-form button[name="save-stay"],
+.translation-form button[name="suggest"] {
+  --bs-btn-color: #c7ebeb;
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: #c7ebeb;
+  --bs-btn-hover-color: #10212b;
+  --bs-btn-hover-bg: #c7ebeb;
+  --bs-btn-hover-border-color: #c7ebeb;
+  --bs-btn-active-color: #10212b;
+  --bs-btn-active-bg: #eaf8f8;
+  --bs-btn-active-border-color: #eaf8f8;
+}
+.translation-form button[name="save"] {
+  --bs-btn-color: #10212b;
+  --bs-btn-bg: #c7ebeb;
+  --bs-btn-border-color: #c7ebeb;
+  --bs-btn-hover-color: #10212b;
+  --bs-btn-hover-bg: #eaf8f8;
+  --bs-btn-hover-border-color: #eaf8f8;
+  --bs-btn-active-color: #10212b;
+  --bs-btn-active-bg: #eaf8f8;
+  --bs-btn-active-border-color: #eaf8f8;
+}
+
+/* Sidebar cards and tabs step back so the editor leads */
+.source-info .card {
+  --bs-card-cap-bg: transparent;
+  border-color: #33393c;
+}
+.source-info .card > .card-header {
+  background: transparent;
+  border-bottom-color: #33393c;
+}
+.source-info .card > .card-header .card-title {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9aa3a8;
+}
+.translation-tabs .nav-link {
+  font-weight: 400;
+  color: #b9c0c4;
+}
+.translation-tabs .nav-link.active {
+  font-weight: 700;
+}

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/Work/keepsake-studio/terraform/layer_0/**)"
+    ],
+    "additionalDirectories": [
+      "D:\\Work\\keepsake-studio\\terraform\\layer_0"
+    ]
+  }
+}

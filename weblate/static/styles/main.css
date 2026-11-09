@@ -2842,3 +2842,30 @@ table.table-simple tbody#glossary-terms .alert-info {
 .ts-dropdown .create {
   color: var(--bs-secondary-color);
 }
+
+/* Peon mode call to action in the navigation */
+.navbar .peon-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-inline-end: 0.75rem;
+  padding: 0.3rem 0.9rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #10212b;
+  background: #c7ebeb;
+  border: 0;
+  border-radius: 999px;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+.navbar .peon-cta:hover,
+.navbar .peon-cta:focus-visible {
+  color: #10212b;
+  background: #eaf8f8;
+  box-shadow: 0 0 0 3px rgba(199, 235, 235, 0.3);
+}
+.navbar a.peon-cta path,
+.navbar a.peon-cta:hover path,
+.navbar a.peon-cta:focus path {
+  fill: currentColor;
+}

@@ -1,0 +1,11 @@
+{% extends "message.html" %}
+
+{% load i18n %}
+
+{% block tags %}info{% endblock %}
+
+{% block message %}
+  <a href="{% url 'onboarding' %}?next={{ request.get_full_path|urlencode:'' }}"
+     class="btn btn-primary float-end">{% translate "Finish setting up" %}</a>
+  {% translate "Tell us which languages you translate and which ones you understand, so we can show you the right strings." %}
+{% endblock message %}

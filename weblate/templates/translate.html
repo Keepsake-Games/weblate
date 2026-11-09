@@ -60,6 +60,13 @@
        title="{% translate "Open in Zen mode" %}"
        class="btn btn-link">{% icon "flash.svg" %} {% translate "Zen" %}</a>
 
+    {% if not unit.is_source %}
+      <a href="{% url 'peon' path=object.get_url_path %}?offset={{ offset }}&amp;{{ search_url }}"
+         id="peon-enter"
+         title="{% translate "Open in Peon mode" %} (Alt+P)"
+         class="btn btn-link">{% icon "person-digging.svg" %} {% translate "Peon" %}</a>
+    {% endif %}
+
     <a href="{% url 'profile' %}#preferences"
        class="btn btn-link"
        title="{% translate "Configure editor" %}">{% icon "settings.svg" %}</a>
@@ -77,9 +84,9 @@
       <div class="col-sm-9">
 
         <form action="{{ this_unit_url }}" method="post" class="translation-form translator">
-          <div class="card">
+          <div class="card card-cta">
 
-            <div class="card-header {% if unit.approved %}text-bg-success{% elif unit.is_source %}text-bg-warning{% endif %}">
+            <div class="card-header">
               <a class="btn btn-link btn-xs float-end"
                  href="{{ site_url }}{{ unit.get_absolute_url }}"
                  data-clipboard-value="{{ site_url }}{{ unit.get_absolute_url }}"
@@ -100,6 +107,7 @@
                     {% translate "Translation" %}
                   {% endif %}
                 {% endif %}
+                {% if unit.approved %}<span class="badge text-bg-success">{% translate "Approved" %}</span>{% endif %}
                 {% include "snippets/unit-readonly-badge.html" %}
               </h4>
             </div>

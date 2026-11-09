@@ -54,6 +54,8 @@ Each commit is self-contained:
 | `feat(auth): admit only holders of a Discord role, on one sign-in page` | Invite-only gate, sign-in page, no separate registration |
 | `feat(ui): restyle the interface for Jump Space` | Brand blue, CJK fonts, no logo, theme flash, single project link |
 | `feat(build): serve our own maintenance pages` | `docker/nginx-errors/`, `Dockerfile` |
+| `feat(accounts): ask newcomers to set up their languages` | `Profile.onboarded`, onboarding page and banner |
+| `feat(trans): add Peon mode, one task at a time` | `trans/views/peon.py`, `peon*.html`, `editor/peon.js`, `styles/peon.css`, navigation button in `base.html` |
 
 Anything not in that list is upstream. `weblate/settings.py` is local and
 git-ignored; it holds the Discord client secret.
@@ -106,6 +108,18 @@ is not among them. Closed registration and `REGISTRATION_ALLOW_BACKENDS` subsets
 keep the upstream behavior. `test_selenium.py` opens the register page by URL
 instead of the removed button.
 Empty by default, which keeps upstream behaviour for the inherited tests.
+
+### Language setup
+
+Until a member saves `/accounts/onboarding/`, every page shows a banner asking
+them to pick their translated languages (at least one) and secondary languages
+(optional). Saving sets `Profile.onboarded`, added by
+`accounts/migrations/0033_profile_onboarded.py`. Existing accounts start out
+not onboarded, so they see it too. Saving the same languages from the profile
+page does not count: that page saves every tab at once, so it cannot tell a
+deliberate language choice from any other edit. Upstream's "Added <language> to
+your translated languages" notice is held back until setup is done, since the
+banner already covers it and the page offers that language preselected.
 
 ### `INITIAL_WATCHED_PROJECTS`
 
@@ -241,6 +255,62 @@ Upstream's box is a typeahead only. autoComplete.js swallows Enter unless its
 instance. The form now points at `search`, and a keydown handler submits it when
 no suggestion is highlighted, leaving Enter-to-pick-a-suggestion intact.
 
+### Peon mode
+
+A third editor next to the full editor and Zen, at `/peon/<path>/`. It shows one
+task at a time in a full screen overlay and is driven entirely from the keyboard.
+
+**Ways in.** The "Translate now" button in the navigation leads to `/peon/`
+(`peon-start`), a job picker that first sends anyone without
+`Profile.onboarded` through the onboarding page. It offers the user's languages
+in the project (`SINGLE_PROJECT`, else watched projects, else all allowed ones)
+with their open counts, and two jobs, picked with <kbd>1</kbd> or <kbd>2</kbd>. Inspect is disabled while there is no suggestion by someone else to review, since nobody can process their own.
+The person-digging button on the translation overview, the full editor
+(<kbd>Alt+P</kbd> there) and Zen go straight to translate mode on that object,
+keeping the current search.
+
+**Modes** (`?mode=`):
+
+* `translate` (default; queue `state:<translated`). Type, <kbd>Enter</kbd> saves,
+  <kbd>Shift+Enter</kbd> is a new line, <kbd>Ctrl+→</kbd> skips,
+  <kbd>Ctrl+1</kbd> copies the source, <kbd>Ctrl+2</kbd> to <kbd>Ctrl+9</kbd>
+  insert glossary terms. Without edit permission it submits a suggestion. Every
+  10 finished translations (`PEON_REVIEW_ROUND`) a "Review round" slips in up to
+  3 suggestion cards from a separate `mode=review` feed, then announces the way
+  back. A unit finished in one feed is dropped from the other.
+* `review` (queue `has:suggestion`). Someone else's suggestion: <kbd>→</kbd>
+  accepts, <kbd>←</kbd> rejects, <kbd>↓</kbd> skips; dragging the card does the
+  same. Without accept permission (for example suggestion voting with
+  auto-accept) the sides are upvote and downvote.
+
+<kbd>Esc</kbd> drops out to the full editor on the same string with the same
+search; its button returns in translate mode. An empty queue shows the finish
+screen instead of Zen's "No strings found" redirect (`blank=True`).
+
+The card shows the explanation or note; matching glossary terms sit in a side
+panel (below the card on narrow screens), with forbidden and untranslatable
+terms marked. History and comments are not shown, a comment count badge says
+when it is worth dropping out.
+
+Saves go to `save_peon`, which returns JSON and reuses the full editor's
+permission checks, suggestion handling and `perform_translation`. A newly failing
+check keeps the card up (the text is saved). Reviews are sent optimistically so
+swiping stays instant; a failed one shows its message after the card is gone.
+Failures never cost the combo.
+
+The juice is all client side: each typed character bursts from the caret in all directions as coloured letter ghosts and confetti, on a
+layer behind the input, so only what clears its edge shows; a combo counter that
+quietly resets after 15 minutes without a completed task, with no visible
+countdown so volunteers are not rushed; sparks, floating score, screen shake,
+milestone banners, and Web Audio blips (no audio assets; <kbd>Alt+M</kbd> mutes,
+remembered in `localStorage`). `prefers-reduced-motion` turns the motion off. The overlay follows the resolved `data-bs-theme`: light tokens by default, dark ones under `[data-bs-theme="dark"]`.
+The views live in their own module rather than `edit.py` to keep upstream
+rebases quiet; the navigation button's style is the last block of
+`styles/main.css`.
+
+The icon, `static/icons/person-digging.svg`, is Font Awesome Free
+(CC BY 4.0); keep the attribution comment inside the file.
+
 ## Rebasing onto a new release
 
 Work on a scratch branch so a failed upgrade never leaves `main` half-rebased:
@@ -273,6 +343,9 @@ Conflicts concentrate in five files, because upstream refactors around them:
   removed logo
 * `weblate/static/loader-bootstrap.js` and `weblate/templates/base.html` for the
   navigation search box
+* `weblate/accounts/migrations/0033_profile_onboarded.py` whenever upstream
+  adds an accounts migration: renumber ours after upstream's newest and point
+  its dependency there, or Django refuses to run with two leaf migrations
 
 When a conflict shows an empty upstream side against a large block of ours, the
 cause is almost always that upstream moved the surrounding code in a release we

@@ -806,6 +806,10 @@ class Profile(models.Model):
         related_name="secondary_profile_set",
         blank=True,
     )
+    onboarded = models.BooleanField(
+        verbose_name=gettext_lazy("Completed the first-time setup"),
+        default=False,
+    )
     suggested = models.IntegerField(default=0, db_index=True)
     translated = models.IntegerField(default=0, db_index=True)
     uploaded = models.IntegerField(default=0, db_index=True)
@@ -1297,14 +1301,15 @@ class Profile(models.Model):
             language = Language.objects.get_request_language(request)
             if language:
                 self.languages.add(language)
-                messages.info(
-                    request,
-                    gettext(
-                        "Added %(language)s to your translated languages. "
-                        "You can adjust them in the settings."
+                if self.onboarded:
+                    messages.info(
+                        request,
+                        gettext(
+                            "Added %(language)s to your translated languages. "
+                            "You can adjust them in the settings."
+                        )
+                        % {"language": language},
                     )
-                    % {"language": language},
-                )
 
         if fields:
             self.save(update_fields=fields)

@@ -38,6 +38,10 @@
        title="{% translate "Edit in single string mode" %}"
        class="btn btn-link">{% icon "close.svg" %} {% translate "Exit Zen" %}</a>
 
+    <a href="{% url 'peon' path=object.get_url_path %}?{{ search_url }}"
+       title="{% translate "Open in Peon mode" %}"
+       class="btn btn-link">{% icon "person-digging.svg" %} {% translate "Peon" %}</a>
+
     <a href="{% url 'profile' %}#preferences"
        class="btn btn-link"
        title="{% translate "Configure editor" %}">{% icon "settings.svg" %}</a>

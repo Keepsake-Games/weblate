@@ -1,0 +1,141 @@
+{% load i18n icons translations %}
+
+{% for task in tasks %}
+  {% with unit=task.unit %}
+    <article class="peon-card {% if task.glossary %}peon-card-glossary{% endif %}"
+             data-kind="{{ task.kind }}"
+             data-unit="{{ unit.pk }}"
+             data-offset="{{ task.offset }}"
+             data-save-url="{% url 'save_peon' path=unit.translation.get_url_path %}"
+             data-full-url="{% url 'translate' path=object.get_url_path %}?{{ search_url }}&amp;offset={{ task.offset }}"
+             {% if task.kind == "review" %}data-right="{{ task.right }}" data-suggestion="{{ task.suggestion.pk }}" {% if task.left %}data-left="{{ task.left }}"{% endif %}{% else %}data-submit="{{ task.submit }}"{% endif %}
+             aria-labelledby="peon-kind-{{ unit.checksum }}"
+             tabindex="-1"
+             hidden>
+      <div class="peon-card-main">
+
+      <header class="peon-card-header">
+        <span class="peon-kind" id="peon-kind-{{ unit.checksum }}">
+          {% if task.kind == "review" %}
+            {% translate "Review this suggestion" %}
+          {% elif task.submit == "suggest" %}
+            {% translate "Suggest a translation" %}
+          {% elif unit.fuzzy %}
+            {% translate "Fix this translation" %}
+          {% else %}
+            {% translate "Translate this" %}
+          {% endif %}
+        </span>
+        <span class="peon-meta">
+          {% if unit.context %}<code class="peon-context">{{ unit.context }}</code>{% endif %}
+          {% if unit.has_comment %}
+            <span class="peon-badge" title="{% translate "Has comments, press Esc to read them" %}">{% icon "comment.svg" %} {{ unit.unresolved_comments|length }}</span>
+          {% endif %}
+        </span>
+      </header>
+
+      {% if unit.source_unit.explanation %}
+        <div class="peon-explanation">{{ unit.source_unit.explanation|markdown }}</div>
+      {% elif unit.note %}
+        <div class="peon-explanation">{{ unit.note|urlize_ugc }}</div>
+      {% endif %}
+
+      <div class="peon-source">
+        <span class="peon-lang">{{ unit.translation.component.source_language }}</span>
+        {% format_unit_source unit glossary=task.glossary %}
+      </div>
+
+      <form class="peon-form" action="{% url 'save_peon' path=unit.translation.get_url_path %}" method="post">
+        {{ task.form.checksum.as_hidden }}
+        {{ task.form.contentsum.as_hidden }}
+        {{ task.form.translationsum.as_hidden }}
+
+        {% if task.kind == "review" %}
+          <div class="peon-suggestion">
+            <span class="peon-lang">{{ unit.translation.language }}</span>
+            {% format_unit_target unit value=task.suggestion.target %}
+            <div class="peon-suggestion-meta">
+              {% if task.suggestion.user %}
+                {% blocktranslate with name=task.suggestion.user.full_name|default:task.suggestion.user.username %}Suggested by {{ name }}{% endblocktranslate %}
+              {% endif %}
+              {% with votes=task.suggestion.get_num_votes %}
+                {% if votes %}
+                  <span class="peon-votes">{% blocktranslate count count=votes %}{{ count }} vote{% plural %}{{ count }} votes{% endblocktranslate %}</span>
+                {% endif %}
+              {% endwith %}
+            </div>
+            {% if unit.translated %}
+              <div class="peon-current">
+                <span class="peon-lang">{% translate "Current" %}</span>
+                {% format_unit_target unit simple=True %}
+              </div>
+            {% endif %}
+          </div>
+          <div class="peon-swipe-hints" aria-hidden="true">
+            <span class="peon-hint-left">{% if task.left == "delete" %}{% translate "Reject" %}{% elif task.left == "downvote" %}{% translate "Downvote" %}{% endif %}</span>
+            <span class="peon-hint-right">{% if task.right == "accept" %}{% translate "Accept" %}{% else %}{% translate "Upvote" %}{% endif %}</span>
+          </div>
+        {% else %}
+          {% for target in task.targets %}
+            <label class="peon-target-label" for="peon-{{ unit.checksum }}-{{ forloop.counter0 }}">
+              <span class="peon-lang">{{ unit.translation.language }}</span>
+              {% if target.label %}<span class="peon-plural">{{ target.label }}</span>{% endif %}
+            </label>
+            <div class="peon-input-wrap">
+              <div class="peon-input-fx" aria-hidden="true"></div>
+              <textarea class="peon-input"
+                      id="peon-{{ unit.checksum }}-{{ forloop.counter0 }}"
+                      name="{{ target.name }}"
+                      lang="{{ unit.translation.language.code }}"
+                      dir="{{ unit.translation.language.direction }}"
+                      rows="2"
+                      spellcheck="true"
+                      {% if unit.get_max_length %}data-max="{{ unit.get_max_length }}"{% endif %}>{{ target.value }}</textarea>
+            </div>
+          {% endfor %}
+          {% for plural in unit.get_source_plurals %}
+            <template class="peon-source-plural">{{ plural }}</template>
+          {% endfor %}
+        {% endif %}
+      </form>
+
+      <div class="peon-card-actions">
+        {% if task.kind == "review" %}
+          {% if task.left %}
+            <button type="button" class="btn btn-outline-danger" data-peon="left"><kbd>←</kbd> {% if task.left == "delete" %}{% translate "Reject" %}{% else %}{% translate "Downvote" %}{% endif %}</button>
+          {% endif %}
+          <button type="button" class="btn btn-outline-secondary" data-peon="skip"><kbd>↓</kbd> {% translate "Skip" %}</button>
+          <button type="button" class="btn btn-primary" data-peon="right"><kbd>→</kbd> {% if task.right == "accept" %}{% translate "Accept" %}{% else %}{% translate "Upvote" %}{% endif %}</button>
+        {% else %}
+          <button type="button" class="btn btn-outline-secondary" data-peon="skip">{% translate "Skip" %}</button>
+          <button type="button" class="btn btn-primary" data-peon="submit"><kbd>Enter</kbd> {% if task.submit == "suggest" %}{% translate "Suggest" %}{% else %}{% translate "Save" %}{% endif %}</button>
+        {% endif %}
+      </div>
+      </div>
+
+      {% if task.glossary %}
+        <aside class="peon-side" aria-labelledby="peon-glossary-{{ unit.checksum }}">
+          <h2 class="peon-side-title" id="peon-glossary-{{ unit.checksum }}">{% translate "Glossary" %}</h2>
+          <ul class="peon-glossary">
+            {% for term in task.glossary %}
+              <li class="{% if "forbidden" in term.all_flags %}peon-forbidden{% elif "read-only" in term.all_flags %}peon-untranslatable{% endif %}">
+                <button type="button"
+                        class="peon-term"
+                        data-value="{% if "read-only" in term.all_flags %}{{ term.source }}{% else %}{{ term.target }}{% endif %}"
+                        {% if "forbidden" in term.all_flags or not term.target %}disabled{% endif %}
+                        title="{% if "forbidden" in term.all_flags %}{% translate "This translation is forbidden." %}{% elif "read-only" in term.all_flags %}{% translate "This term should not be translated." %}{% else %}{% translate "Insert into translation" %}{% endif %}">
+                  {% if forloop.counter < 9 and task.kind == "translate" %}<kbd class="peon-term-key">{{ forloop.counter|add:1 }}</kbd>{% endif %}
+                  <span class="peon-term-source">{{ term.source }}</span>
+                  <span class="peon-term-target">{% if "read-only" in term.all_flags %}{{ term.source }}{% else %}{{ term.target|default:"·" }}{% endif %}</span>
+                </button>
+                {% if term.explanation %}<p class="peon-term-explanation">{{ term.explanation }}</p>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </aside>
+      {% endif %}
+    </article>
+  {% endwith %}
+{% endfor %}
+
+{% if last_section %}<span class="peon-end" hidden></span>{% endif %}

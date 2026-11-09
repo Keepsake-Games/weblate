@@ -82,6 +82,7 @@ urlpatterns = [
     path("reset/", weblate.accounts.views.reset_password, name="password_reset"),
     path("logout/", weblate.accounts.views.WeblateLogoutView.as_view(), name="logout"),
     path("profile/", weblate.accounts.views.user_profile, name="profile"),
+    path("onboarding/", weblate.accounts.views.onboarding, name="onboarding"),
     path("userdata/", weblate.accounts.views.userdata, name="userdata"),
     path("unsubscribe/", weblate.accounts.views.unsubscribe, name="unsubscribe"),
     path("subscribe/", weblate.accounts.views.subscribe, name="subscribe"),

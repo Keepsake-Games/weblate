@@ -109,6 +109,7 @@ from weblate.accounts.forms import (
     LanguagesForm,
     LoginForm,
     NotificationForm,
+    OnboardingForm,
     OTPTokenForm,
     PasswordConfirmForm,
     ProfileForm,
@@ -551,6 +552,30 @@ def user_profile(request: AuthenticatedHttpRequest):
             "recovery_keys_count": StaticToken.objects.filter(
                 device__user=user
             ).count(),
+        },
+    )
+
+
+@login_required
+def onboarding(request: AuthenticatedHttpRequest):
+    profile = request.user.profile
+    profile.fixup_profile(request)
+    form = OnboardingForm.from_request(request)
+    next_url = request.POST.get("next") or request.GET.get("next")
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, gettext("You are all set, happy translating!"))
+        return redirect_next(next_url, "home")
+
+    return render(
+        request,
+        "accounts/onboarding.html",
+        {
+            "form": form,
+            "next": next_url,
+            "title": gettext("Get started"),
+            "hide_onboarding_banner": True,
         },
     )
 

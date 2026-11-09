@@ -46,6 +46,7 @@ import weblate.trans.views.git
 import weblate.trans.views.js
 import weblate.trans.views.labels
 import weblate.trans.views.lock
+import weblate.trans.views.peon
 import weblate.trans.views.reports
 import weblate.trans.views.search
 import weblate.trans.views.settings
@@ -151,6 +152,16 @@ real_patterns = [
         "zen/<object_path:path>/",
         weblate.trans.views.edit.zen,
         name="zen",
+    ),
+    path(
+        "peon/",
+        weblate.trans.views.peon.peon_start,
+        name="peon-start",
+    ),
+    path(
+        "peon/<object_path:path>/",
+        weblate.trans.views.peon.peon,
+        name="peon",
     ),
     path(
         "download/<object_path:path>/",
@@ -866,6 +877,16 @@ real_patterns = [
         "js/save-zen/<object_path:path>/",
         weblate.trans.views.edit.save_zen,
         name="save_zen",
+    ),
+    path(
+        "js/peon/<object_path:path>/",
+        weblate.trans.views.peon.load_peon,
+        name="load_peon",
+    ),
+    path(
+        "js/save-peon/<object_path:path>/",
+        weblate.trans.views.peon.save_peon,
+        name="save_peon",
     ),
     # Glossary add
     path(
