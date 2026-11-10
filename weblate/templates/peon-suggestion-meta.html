@@ -1,0 +1,10 @@
+{% load i18n %}
+
+{% if suggestion.user %}
+  {% blocktranslate with name=suggestion.user.full_name|default:suggestion.user.username %}Suggested by {{ name }}{% endblocktranslate %}
+{% endif %}
+{% with votes=suggestion.get_num_votes %}
+  {% if votes %}
+    <span class="peon-votes">{% blocktranslate count count=votes %}{{ count }} vote{% plural %}{{ count }} votes{% endblocktranslate %}</span>
+  {% endif %}
+{% endwith %}

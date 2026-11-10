@@ -1,0 +1,17 @@
+{% for target in targets %}
+  <label class="peon-target-label" for="peon-{{ unit.checksum }}-{{ forloop.counter0 }}">
+    <span class="peon-lang">{{ unit.translation.language }}</span>
+    {% if target.label %}<span class="peon-plural">{{ target.label }}</span>{% endif %}
+  </label>
+  <div class="peon-input-wrap">
+    <div class="peon-input-fx" aria-hidden="true"></div>
+    <textarea class="peon-input"
+              id="peon-{{ unit.checksum }}-{{ forloop.counter0 }}"
+              name="{{ target.name }}"
+              lang="{{ unit.translation.language.code }}"
+              dir="{{ unit.translation.language.direction }}"
+              rows="2"
+              spellcheck="true"
+              {% if unit.get_max_length %}data-max="{{ unit.get_max_length }}"{% endif %}>{{ target.value }}</textarea>
+  </div>
+{% endfor %}

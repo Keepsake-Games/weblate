@@ -251,6 +251,63 @@ body.peon-active #popup-toasts {
   user-select: none;
 }
 
+.peon-card[data-kind="counter"] .peon-review-only,
+.peon-card:not([data-kind="counter"]) .peon-counter-only {
+  display: none;
+}
+
+.peon-card[data-multi] {
+  cursor: auto;
+}
+
+.peon-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.peon-choice {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--peon-surface-2);
+  border-radius: 0.5rem;
+}
+
+.peon-choice .peon-suggestion-meta {
+  grid-column: 1;
+}
+
+.peon-choice-pick {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  white-space: nowrap;
+}
+
+.peon-choice-settled {
+  opacity: 0.6;
+}
+
+.peon-choice-status {
+  margin-inline-start: 0.5rem;
+  font-weight: 600;
+}
+
+.peon-counter {
+  margin-top: 1rem;
+}
+
+.peon-counter-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--peon-muted);
+}
+
 .peon-card.peon-dragging {
   cursor: grabbing;
   transition: none;
@@ -698,8 +755,10 @@ body.peon-active #popup-toasts {
   gap: 0.5rem 1.5rem;
 }
 
-.peon:not([data-mode="translate"]) .peon-keys-translate,
-.peon:not([data-mode="review"]) .peon-keys-review {
+.peon:not([data-mode="translate"], [data-mode="counter"]) .peon-keys-translate,
+.peon:not([data-mode="review"]) .peon-keys-review,
+.peon:not([data-multi]) .peon-keys-pick,
+.peon[data-multi] .peon-keys-accept {
   display: none;
 }
 

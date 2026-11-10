@@ -188,7 +188,12 @@
         () => card.classList.remove("peon-enter"),
         { once: true },
       );
+      if (!card.classList.contains("peon-interlude")) {
+        this.position = Number.parseInt(card.dataset.offset, 10) - 1;
+        this.updateHud();
+      }
       this.root.dataset.mode = card.dataset.kind;
+      this.root.toggleAttribute("data-multi", "multi" in card.dataset);
       this.status.textContent = card.querySelector(".peon-kind").textContent.trim();
       this.focusCurrent();
       this.prefetch();
@@ -199,7 +204,10 @@
         this.root.querySelector(".peon-finished:not([hidden])")?.focus();
         return;
       }
-      const input = this.current.querySelector(".peon-input");
+      const input =
+        this.current.dataset.kind === "review"
+          ? null
+          : this.current.querySelector(".peon-input");
       if (input) {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
@@ -365,6 +373,18 @@
         this.miss(card, gettext("Type the translation first."));
         return;
       }
+      const countering = card.dataset.kind === "counter";
+      if (countering && inputs.every((input) => input.value === input.defaultValue)) {
+        /* An unchanged counter is agreement, never take over their wording */
+        if (card.dataset.right) {
+          card.dataset.kind = "review";
+          this.review(card, card.dataset.right, card.dataset.suggestion, "right");
+        } else {
+          this.miss(card, gettext("Change the translation first."));
+        }
+        return;
+      }
+      /* A counter carries every pending suggestion from the form */
       const form = card.querySelector(".peon-form");
       const data = new FormData(form);
       data.set("action", card.dataset.submit);
@@ -397,16 +417,62 @@
         this.miss(card, gettext("You can not do that with this suggestion."));
         return;
       }
+      if (side === "right" && "multi" in card.dataset) {
+        this.miss(card, gettext("Pick a suggestion by its number."));
+        return;
+      }
+      /* Left goes to every pending suggestion, right only to the shown one */
+      this.review(card, action, side === "right" ? card.dataset.suggestion : null, side);
+    }
+
+    pick(button) {
+      const card = this.current;
+      if (
+        card === null ||
+        card.dataset.kind !== "review" ||
+        !card.dataset.right ||
+        !button ||
+        !card.contains(button)
+      ) {
+        return;
+      }
+      this.review(card, card.dataset.right, button.dataset.suggestion, "right");
+    }
+
+    review(card, action, suggestion, direction) {
       const data = new FormData(card.querySelector(".peon-form"));
       data.set("action", action);
-      data.set("suggestion", card.dataset.suggestion);
+      if (suggestion !== null) {
+        data.set("suggestion", suggestion);
+      }
       /* Reviews are optimistic so swiping stays instant */
       this.post(card, data).then((result) => {
         if (!result.done) {
           Sound.error();
         }
       });
-      this.hit(card, side, action === "delete" || action === "downvote");
+      this.hit(card, direction, action === "delete" || action === "downvote");
+    }
+
+    counter() {
+      const card = this.current;
+      if (card === null || card.dataset.kind !== "review") {
+        return;
+      }
+      if (!card.dataset.counter) {
+        this.miss(card, gettext("You can not do that with this suggestion."));
+        return;
+      }
+      const label = card
+        .querySelector(".peon-counter-kind")
+        .content.textContent.trim();
+      card.dataset.kind = "counter";
+      card.dataset.submit = "counter";
+      card.querySelector(".peon-kind").textContent = label;
+      this.root.dataset.mode = "counter";
+      this.status.textContent = label;
+      this.pop(card.querySelector(".peon-form"));
+      this.focusCurrent();
     }
 
     skip() {
@@ -777,6 +843,10 @@
           this.submit();
         } else if (action === "skip") {
           this.skip();
+        } else if (action === "counter") {
+          this.counter();
+        } else if (action === "pick") {
+          this.pick(button);
         } else {
           this.swipe(action);
         }
@@ -830,7 +900,7 @@
       }
       const mod = event.ctrlKey || event.metaKey;
 
-      if (card.dataset.kind === "translate") {
+      if (card.dataset.kind === "translate" || card.dataset.kind === "counter") {
         const input = event.target.closest?.(".peon-input");
         const onCard = input || event.target === card;
         if (event.key === "Enter" && !event.shiftKey && !event.altKey && onCard) {
@@ -855,6 +925,13 @@
       if (mod || event.altKey || event.target.closest?.("input, textarea, select")) {
         return;
       }
+      if (/^[1-9]$/.test(event.key) && "multi" in card.dataset) {
+        event.preventDefault();
+        if (!event.repeat) {
+          this.pick(card.querySelector(`.peon-choice-pick[data-key="${event.key}"]`));
+        }
+        return;
+      }
       const keys = {
         ArrowRight: "right",
         l: "right",
@@ -865,6 +942,9 @@
         ArrowDown: "skip",
         j: "skip",
         s: "skip",
+        ArrowUp: "counter",
+        k: "counter",
+        w: "counter",
       };
       const action = keys[event.key];
       if (!action) {
@@ -876,6 +956,8 @@
       }
       if (action === "skip") {
         this.skip();
+      } else if (action === "counter") {
+        this.counter();
       } else {
         this.swipe(action);
       }
@@ -889,6 +971,7 @@
         if (
           card !== this.current ||
           card.dataset.kind !== "review" ||
+          "multi" in card.dataset ||
           event.target.closest("button, a") ||
           event.button !== 0
         ) {

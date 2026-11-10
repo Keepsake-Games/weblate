@@ -55,7 +55,7 @@ Each commit is self-contained:
 | `feat(ui): restyle the interface for Jump Space` | Brand blue, CJK fonts, no logo, theme flash, single project link |
 | `feat(build): serve our own maintenance pages` | `docker/nginx-errors/`, `Dockerfile` |
 | `feat(accounts): ask newcomers to set up their languages` | `Profile.onboarded`, onboarding page and banner |
-| `feat(trans): add Peon mode, one task at a time` | `trans/views/peon.py`, `peon*.html`, `editor/peon.js`, `styles/peon.css`, navigation button in `base.html` |
+| `feat(trans): add Peon mode, one task at a time` | `trans/views/peon.py`, `peon*.html`, `editor/peon.js`, `styles/peon.css`, navigation button in `base.html`; later: rotated per-session queue, counter suggestions |
 
 Anything not in that list is upstream. `weblate/settings.py` is local and
 git-ignored; it holds the Discord client secret.
@@ -175,15 +175,17 @@ uses the primary color there, with the page background as text color, which in
 dark mode would be near-black on `#0f3e54`; hence the explicit text color for
 both themes. None of the **Manage → Appearance** settings reach this rule.
 
-### Navigation brand hover
+### Navigation brand and icon hover
 
-The site name in the navigation bar hovers with the same color as the navigation
-links, `--bs-navbar-hover-color` (the **Hover color** under **Manage →
-Appearance**). Upstream's `configuration/custom.css` template ties it to the
-*Focus color* instead, which with our colors is the navigation background in dark
-mode, so the name vanished on hover. Overridden by a rule after `.navbar-brand`
-in `weblate/static/styles/main.css` rather than by editing that template, so the
-Appearance settings keep working as upstream documents them.
+The site name and the icons in the navigation bar hover with the same color as
+the navigation links, `--bs-navbar-hover-color` (the **Hover color** under
+**Manage → Appearance**). Upstream ties them to the *Focus color* instead (the
+brand through the `configuration/custom.css` template, the icons through the
+`.navbar a:hover path` fill in `main.css`), which with our colors is the
+navigation background in dark mode, so they vanished on hover. The brand is
+overridden by a rule after `.navbar-brand` and the icon fill is changed in
+place, both in `weblate/static/styles/main.css`, rather than by editing that
+template, so the Appearance settings keep working as upstream documents them.
 
 ### Brand blue instead of turquoise
 
@@ -271,17 +273,65 @@ keeping the current search.
 
 **Modes** (`?mode=`):
 
-* `translate` (default; queue `state:<translated`). Type, <kbd>Enter</kbd> saves,
+* `translate` (default; queue `state:<translated AND NOT has:suggestion`, so a
+  string with any suggestion belongs to review instead). Type, <kbd>Enter</kbd> saves,
   <kbd>Shift+Enter</kbd> is a new line, <kbd>Ctrl+→</kbd> skips,
   <kbd>Ctrl+1</kbd> copies the source, <kbd>Ctrl+2</kbd> to <kbd>Ctrl+9</kbd>
   insert glossary terms. Without edit permission it submits a suggestion. Every
   10 finished translations (`PEON_REVIEW_ROUND`) a "Review round" slips in up to
   3 suggestion cards from a separate `mode=review` feed, then announces the way
   back. A unit finished in one feed is dropped from the other.
-* `review` (queue `has:suggestion`). Someone else's suggestion: <kbd>→</kbd>
+* `review` (queue `has:suggestion`, narrowed by `PeonNavigation` to strings with a
+  suggestion the reviewer neither wrote nor voted on: "pending", see
+  `get_pending_suggestions`; the start page counts the same way). One pending
+  suggestion: <kbd>→</kbd>
   accepts, <kbd>←</kbd> rejects, <kbd>↓</kbd> skips; dragging the card does the
   same. Without accept permission (for example suggestion voting with
-  auto-accept) the sides are upvote and downvote.
+  auto-accept) the sides are upvote and downvote. Several suggestions on the
+  string make a choice card instead ("Pick the best suggestion", no dragging):
+  every suggestion is listed, the pending ones numbered, <kbd>1</kbd> to
+  <kbd>9</kbd> accepts or upvotes that one, <kbd>←</kbd> ("None of these")
+  rejects or downvotes all pending ones, and the rest show "Yours", "You
+  upvoted" or "You downvoted". <kbd>↑</kbd> ("Suggest different") counters: the
+  card turns into a translate card prefilled with the first pending suggestion, and saving
+  (action `counter`) stores the user's wording the way a translate card would
+  (translation, or suggestion without edit permission), then deletes every
+  pending one if the user may (`suggestion.delete`), else downvotes them if voting is
+  on, else leaves them for others. The card says which before saving. Writing
+  out the text of a pending suggestion, including saving the prefill
+  unchanged, counts as agreeing with it, so nobody takes over a suggester's credit.
+
+**Voting.** Weblate counts the author's own upvote, so with auto-accept at 2 a
+single upvote from a reviewer accepts. Submitting text identical to someone
+else's suggestion upvotes it (Weblate does that silently and reports "already
+exists"; Peon treats it as done and says it counted as a vote). When voting
+turns the user's saves into suggestions (`suggests_only`), the HUD says
+"Suggesting", the start page "Suggest translations", and the key hints say
+Suggest, Upvote and Downvote.
+
+**Machine drafts.** AI placeholders from the Unity XLFTranslator are uploaded
+with method `fuzzy` ("Needs editing"), not as suggestions, so they never enter
+voting. They stay in the translate queue as "Improve this draft" cards with the
+draft in the box; the first human suggestion moves the string to review. The
+tool's pull skips anything below translated, so the game keeps shipping the
+draft until a suggestion is accepted.
+
+Drafts pushed earlier as suggestions are converted with
+`weblate suggestions_to_drafts --user <username> [--project <slug>]` (a dry run;
+add `--apply`, and `-v 2` to list each string). For each string the account
+suggested on, the newest suggestion becomes a "Needs editing" draft recorded as
+"Automatically translated" (action 6, which the tool's credits do not count,
+and searchable as `is:automatically-translated`), and the account's other
+suggestions there are removed. Strings already translated, with a different
+draft, or whose suggestion someone else voted on are left alone and counted.
+
+**Sharing a queue.** Each Peon session snapshots its queue under its own session
+key (`search_peon_…`, `PeonNavigation`, so the full editor never reuses the
+rotated order) and rotates it to a random start, so people starting on the same
+language together begin in different places. Every batch is re-checked against
+the live query, dropping strings someone else finished since the snapshot. The
+progress bar follows the card's position in the snapshot, and <kbd>Esc</kbd>
+finds the string by `checksum` rather than by offset.
 
 <kbd>Esc</kbd> drops out to the full editor on the same string with the same
 search; its button returns in translate mode. An empty queue shows the finish

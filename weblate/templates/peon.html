@@ -31,11 +31,7 @@
        aria-labelledby="peon-title"
        data-game="{{ mode }}"
        data-load-url="{% url 'load_peon' path=object.get_url_path %}?mode={{ mode }}&amp;{{ search_url }}"
-       {% if mode == "translate" %}
-         data-review-url="{% url 'load_peon' path=object.get_url_path %}?{{ review_query }}"
-         data-review-every="{{ review_round.every }}"
-         data-review-size="{{ review_round.size }}"
-       {% endif %}
+       {% if mode == "translate" %} data-review-url="{% url 'load_peon' path=object.get_url_path %}?{{ review_query }}" data-review-every="{{ review_round.every }}" data-review-size="{{ review_round.size }}" {% endif %}
        data-exit-url="{{ translate_url }}?{{ search_url }}"
        data-offset="{{ offset }}"
        data-total="{{ filter_count }}"
@@ -49,6 +45,8 @@
         <span class="peon-game">
           {% if mode == "review" %}
             {% translate "Reviewing" %}
+          {% elif suggesting %}
+            {% translate "Suggesting" %}
           {% else %}
             {% translate "Translating" %}
           {% endif %}
@@ -105,14 +103,40 @@
 
     <footer class="peon-keys" aria-label="{% translate "Keyboard shortcuts" %}">
       <span class="peon-keys-translate">
-        <span><kbd>Enter</kbd> {% translate "Save" %}</span>
+        <span><kbd>Enter</kbd>
+          {% if suggesting %}
+            {% translate "Suggest" %}
+          {% else %}
+            {% translate "Save" %}
+          {% endif %}
+        </span>
         <span><kbd>Shift</kbd>+<kbd>Enter</kbd> {% translate "New line" %}</span>
         <span><kbd>Ctrl</kbd>+<kbd>→</kbd> {% translate "Skip" %}</span>
         <span><kbd>Ctrl</kbd>+<kbd>1</kbd> {% translate "Copy source" %}</span>
       </span>
       <span class="peon-keys-review">
-        <span><kbd>→</kbd> {% translate "Accept" %}</span>
-        <span><kbd>←</kbd> {% translate "Reject" %}</span>
+        <span class="peon-keys-pick"><kbd>1</kbd>…<kbd>9</kbd> {% translate "Pick" %}</span>
+        <span class="peon-keys-accept"><kbd>→</kbd>
+          {% if suggesting %}
+            {% translate "Upvote" %}
+          {% else %}
+            {% translate "Accept" %}
+          {% endif %}
+        </span>
+        <span><kbd>←</kbd>
+          {% if suggesting %}
+            {% translate "Downvote" %}
+          {% else %}
+            {% translate "Reject" %}
+          {% endif %}
+        </span>
+        <span><kbd>↑</kbd>
+          {% if suggesting %}
+            {% translate "Suggest different" %}
+          {% else %}
+            {% translate "Write different" %}
+          {% endif %}
+        </span>
         <span><kbd>↓</kbd> {% translate "Skip" %}</span>
       </span>
       <span><kbd>Esc</kbd> {% translate "Full editor" %}</span>

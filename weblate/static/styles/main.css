@@ -1465,7 +1465,7 @@ thead th {
 .navbar .navbar-brand:focus path,
 .navbar .navbar-brand:active path,
 .navbar a:hover path {
-  fill: var(--wl-focus-color);
+  fill: var(--bs-navbar-hover-color);
 }
 
 .navbar .open a path,
